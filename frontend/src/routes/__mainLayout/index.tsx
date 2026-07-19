@@ -89,13 +89,13 @@ function OverviewPage() {
   }))
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5 sm:gap-6">
       <PageHeader
         title="Overview"
         description="Executive view of AI token usage, cost, and activity."
         actions={
           <Select value={range} onValueChange={setRange}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-36 sm:w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -107,7 +107,7 @@ function OverviewPage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
         <StatCard label="Total tokens" value={summary.totalTokens} icon="tokens" format="compact" />
         <StatCard label="Est. cost" value={summary.estimatedCost} icon="cost" format="currency" />
         <StatCard label="Input tokens" value={summary.inputTokens} icon="tokens" format="compact" />
@@ -116,7 +116,7 @@ function OverviewPage() {
         <StatCard label="Active users" value={summary.activeUsers} icon="users" format="number" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
         <SectionCard
           title="Token trend"
           description="Daily input, output, and cached tokens"
@@ -149,7 +149,7 @@ function OverviewPage() {
         </SectionCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
         <SectionCard title="Cost trend" description="Estimated spend over time" className="lg:col-span-2">
           <CostTrendChart data={daily} />
         </SectionCard>
@@ -158,7 +158,7 @@ function OverviewPage() {
         </SectionCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
         <SectionCard
           title="Hourly usage"
           description="When tokens are consumed (UTC)"
@@ -185,17 +185,10 @@ function OverviewPage() {
         </SectionCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
         <SectionCard
           title="Top users"
           description="By total tokens"
-          action={
-            <Link to="/users">
-              <Button variant="ghost" size="sm">
-                View all <ArrowRight className="size-3.5" />
-              </Button>
-            </Link>
-          }
         >
           <RankBars
             items={topUsers.map((u) => ({ id: u.id, name: u.name, totalTokens: u.totalTokens }))}
@@ -220,9 +213,9 @@ function OverviewPage() {
           title="Most used model"
           description={modelById.get(summary.mostUsedModelId ?? "") ?? "—"}
         >
-          <div className="flex flex-col items-center justify-center gap-3 py-6">
-            <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <Boxes className="size-7" />
+          <div className="flex flex-col items-center justify-center gap-3 py-4 sm:py-6">
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:size-14">
+              <Boxes className="size-6 sm:size-7" />
             </div>
             <div className="text-center">
               <p className="font-semibold">{modelById.get(summary.mostUsedModelId ?? "") ?? "—"}</p>
@@ -239,7 +232,7 @@ function OverviewPage() {
         </SectionCard>
       </div>
 
-      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           <FolderKanban className="size-3.5" /> {summary.activeProjects} projects
         </span>

@@ -6,6 +6,7 @@ declare global {
   interface Window {
     electronAPI?: {
       getClaudeLogs: () => Promise<import("./data/ingest-core").IngestedDataset>
+      getSystemUserName: () => Promise<string>
     }
   }
 }

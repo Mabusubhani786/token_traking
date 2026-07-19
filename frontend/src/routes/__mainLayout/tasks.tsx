@@ -148,21 +148,21 @@ function TasksPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5 sm:gap-6">
       <PageHeader
         title="Tasks"
         description="Every tracked unit of work and its token spend."
         actions={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search tasks…"
-              className="w-44 sm:w-56"
+              className="min-w-0 flex-1 sm:w-56 sm:flex-none"
               startIcon={Search}
             />
             <Select value={projectId} onValueChange={setProjectId}>
-              <SelectTrigger className="w-36 sm:w-40">
+              <SelectTrigger className="w-full min-w-[8rem] sm:w-40">
                 <SelectValue placeholder="Project" />
               </SelectTrigger>
               <SelectContent>
@@ -175,7 +175,7 @@ function TasksPage() {
               </SelectContent>
             </Select>
             <Select value={modelId} onValueChange={setModelId}>
-              <SelectTrigger className="w-36 sm:w-44">
+              <SelectTrigger className="w-full min-w-[8rem] sm:w-44">
                 <SelectValue placeholder="Model" />
               </SelectTrigger>
               <SelectContent>
@@ -188,7 +188,7 @@ function TasksPage() {
               </SelectContent>
             </Select>
             <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-full min-w-[7rem] sm:w-32">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -201,7 +201,7 @@ function TasksPage() {
               </SelectContent>
             </Select>
             <Select value={level} onValueChange={setLevel}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-full min-w-[7rem] sm:w-32">
                 <SelectValue placeholder="Level" />
               </SelectTrigger>
               <SelectContent>

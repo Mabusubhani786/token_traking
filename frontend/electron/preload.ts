@@ -4,4 +4,5 @@ import { contextBridge, ipcRenderer } from "electron"
 // getClaudeLogs() to read real token usage from the local system.
 contextBridge.exposeInMainWorld("electronAPI", {
   getClaudeLogs: () => ipcRenderer.invoke("claude-logs"),
+  getSystemUserName: () => ipcRenderer.invoke("system-user-name"),
 })

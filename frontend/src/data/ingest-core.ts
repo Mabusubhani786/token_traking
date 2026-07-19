@@ -243,18 +243,26 @@ export function parseClaudeLogs(
 
 // Turn parsed sessions into a full, costed dataset. Pure + deterministic so
 // the server middleware and the browser importer produce identical results.
-export function buildDataset(sessions: ParsedSession[]): IngestedDataset {
+export function buildDataset(sessions: ParsedSession[], userName?: string): IngestedDataset {
   const projects = new Map<string, Project>()
   const models = new Map<string, Model>()
   const tasks = new Map<string, Task>()
   const users = new Map<string, User>()
   const events: UsageEvent[] = []
 
+  const name = userName || "You"
+  const initials = name
+    .split(" ")
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase()
+
   const you: User = {
     id: "u-you",
-    name: "You",
+    name,
     email: "",
-    avatarUrl: "https://api.dicebear.com/9.x/initials/svg?seed=You",
+    avatarUrl: `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(initials)}`,
     role: "User",
     createdAt: nowISO(),
     updatedAt: nowISO(),

@@ -67,7 +67,7 @@ function ProjectsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5 sm:gap-6">
       <PageHeader
         title="Projects"
         description="Token usage, cost, and activity per project."
@@ -76,7 +76,7 @@ function ProjectsPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search projects…"
-            className="w-56"
+            className="w-full sm:w-56"
             startIcon={Search}
           />
         }

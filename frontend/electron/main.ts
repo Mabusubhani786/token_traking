@@ -1,6 +1,8 @@
 import { join, normalize, extname } from "node:path"
 import { createServer } from "node:http"
 import { readFile, stat } from "node:fs/promises"
+import { userInfo } from "node:os"
+import { execSync } from "node:child_process"
 import {
   app,
   BrowserWindow,
@@ -111,8 +113,24 @@ function createWindow() {
   }
 }
 
+function getSystemUserName(): string {
+  const u = userInfo()
+  let name = u.username
+  try {
+    const full = execSync(
+      `dscl . -read /Users/${u.username} RealName 2>/dev/null | tail -1 | sed 's/RealName: //'`,
+      { encoding: "utf8", timeout: 2000 },
+    ).trim()
+    if (full) name = full
+  } catch {
+    // fall back to username
+  }
+  return name
+}
+
 app.whenReady().then(() => {
   ipcMain.handle("claude-logs", (_e: IpcMainInvokeEvent) => handleClaudeLogs())
+  ipcMain.handle("system-user-name", () => getSystemUserName())
   createWindow()
 
   app.on("activate", () => {

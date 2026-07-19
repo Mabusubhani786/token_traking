@@ -51,7 +51,7 @@ function ModelsPage() {
 
   if (rows.length === 0) {
     return (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-5 sm:gap-6">
         <PageHeader
           title="Models"
           description="Token and cost breakdown by AI model and provider."
@@ -66,20 +66,20 @@ function ModelsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5 sm:gap-6">
       <PageHeader
         title="Models"
         description="Token and cost breakdown by AI model and provider."
       />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
         <StatCard label="Total tokens" value={totalTokens} icon="tokens" format="compact" />
         <StatCard label="Est. cost" value={totalCost} icon="cost" format="currency" />
         <StatCard label="Models" value={rows.length} icon={Boxes} format="number" />
         <StatCard label="Providers" value={providerCount} icon={Building2} format="number" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
         <SectionCard
           title="Tokens by model"
           description="Share of total usage"

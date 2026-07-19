@@ -220,6 +220,15 @@
 [data-density="compact"] .table-cell { padding-top: 0.4rem; padding-bottom: 0.4rem; }
 [data-density="compact"] .card-pad { padding: 0.875rem 1rem; }
 
+/* ---- Responsive helpers ----------------------------------------------- */
+
+@utility line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

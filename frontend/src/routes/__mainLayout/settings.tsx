@@ -145,13 +145,13 @@ function SettingsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5 sm:gap-6">
       <PageHeader
         title="Settings"
         description="Theme, density, currency, and data controls."
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
         <SectionCard title="Appearance" description="Theme mode">
           <div className="grid grid-cols-3 gap-2">
             {THEMES.map((t) => {
@@ -163,7 +163,7 @@ function SettingsPage() {
                   type="button"
                   onClick={() => setTheme(t.id)}
                   className={cn(
-                    "flex flex-col items-center gap-2 rounded-lg border p-4 text-sm transition-colors",
+                    "flex flex-col items-center gap-2 rounded-lg border p-3 text-sm transition-colors sm:p-4",
                     active
                       ? "border-primary bg-primary/5 text-foreground"
                       : "border-border text-muted-foreground hover:bg-muted",

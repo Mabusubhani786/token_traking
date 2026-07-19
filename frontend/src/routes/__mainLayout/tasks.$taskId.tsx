@@ -54,7 +54,7 @@ function TaskDetailPage() {
   // shared message URL doesn't flash "Task not found".
   if (store.usageEvents.length === 0) {
     return (
-      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-muted-foreground">
+      <div className="flex min-h-[30vh] flex-col items-center justify-center gap-3 text-muted-foreground">
         <Loader2 className="size-5 animate-spin" />
         <p className="text-sm">Loading task…</p>
       </div>
@@ -106,22 +106,22 @@ function TaskDetailPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-          <StatCard label="Total tokens" value={summary.totalTokens} icon="tokens" format="compact" />
-          <StatCard label="Est. cost" value={summary.estimatedCost} icon="cost" format="currency" />
-          <StatCard label="Input" value={summary.inputTokens} icon="tokens" format="compact" />
-          <StatCard label="Output" value={summary.outputTokens} icon="tokens" format="compact" />
-          <Card className="stat-card card-pad gap-2 p-4 lg:p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Duration</span>
-            </div>
-            <div className="stat-value text-2xl font-semibold tabular-nums tracking-tight">
-              {duration}
-            </div>
-          </Card>
-        </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+        <StatCard label="Total tokens" value={summary.totalTokens} icon="tokens" format="compact" />
+        <StatCard label="Est. cost" value={summary.estimatedCost} icon="cost" format="currency" />
+        <StatCard label="Input" value={summary.inputTokens} icon="tokens" format="compact" />
+        <StatCard label="Output" value={summary.outputTokens} icon="tokens" format="compact" />
+        <Card className="stat-card card-pad gap-1.5 p-3.5 sm:p-4 lg:p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Duration</span>
+          </div>
+          <div className="stat-value text-xl font-semibold tabular-nums tracking-tight sm:text-2xl">
+            {duration}
+          </div>
+        </Card>
+      </div>
 
-        <SectionCard title="Belongs to session">
+      <SectionCard title="Belongs to session">
           <Link
             to="/tasks/$taskId"
             params={{ taskId: detail.parent.id }}
@@ -196,7 +196,7 @@ function TaskDetailPage() {
   const maxHeat = Math.max(...heatmap.map((c) => c.value), 1)
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5 sm:gap-6">
       <PageHeader
         title={task.title}
         description={`${project?.name ?? "—"}${user ? ` · ${user.name}` : ""}`}
@@ -222,7 +222,7 @@ function TaskDetailPage() {
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
         <StatCard label="Total tokens" value={summary.totalTokens} icon="tokens" format="compact" />
         <StatCard label="Est. cost" value={summary.estimatedCost} icon="cost" format="currency" />
         <StatCard label="Events" value={summary.eventCount} icon="tasks" format="number" hint="records" />
@@ -230,7 +230,7 @@ function TaskDetailPage() {
         <StatCard label="Output" value={summary.outputTokens} icon="tokens" format="compact" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
         <SectionCard title="Token trend" className="lg:col-span-2">
           <TokenTrendChart data={detail.daily ?? []} height={200} />
         </SectionCard>
@@ -247,7 +247,7 @@ function TaskDetailPage() {
         </SectionCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
         <SectionCard title="Cost trend" className="lg:col-span-2">
           <CostTrendChart data={detail.daily ?? []} height={200} />
         </SectionCard>
@@ -256,7 +256,7 @@ function TaskDetailPage() {
         </SectionCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
         <SectionCard title="Hourly usage" description="UTC">
           <HourlyBarChart data={hourly} height={180} />
         </SectionCard>

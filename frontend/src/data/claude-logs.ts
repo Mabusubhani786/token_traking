@@ -8,6 +8,7 @@
 import fs from "fs"
 import os from "os"
 import path from "path"
+import { execSync } from "child_process"
 
 import { buildDataset, parseClaudeLogs, type IngestedDataset } from "./ingest-core"
 
@@ -39,5 +40,17 @@ export function readClaudeLogs(): IngestedDataset {
   const root = path.join(os.homedir(), ".claude", "projects")
   const files: { name: string; text: string }[] = []
   collectJsonl(root, files)
-  return buildDataset(parseClaudeLogs(files))
+
+  let displayName = os.userInfo().username
+  try {
+    const full = execSync(
+      `dscl . -read /Users/${os.userInfo().username} RealName 2>/dev/null | tail -1 | sed 's/RealName: //'`,
+      { encoding: "utf8", timeout: 2000 },
+    ).trim()
+    if (full) displayName = full
+  } catch {
+    // fall back to username
+  }
+
+  return buildDataset(parseClaudeLogs(files), displayName)
 }

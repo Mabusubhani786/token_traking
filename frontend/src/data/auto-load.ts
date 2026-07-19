@@ -10,6 +10,8 @@ import {
   hydrateFromPersistence,
   isEmpty,
   loadDataset,
+  getUsers,
+  updateUser,
 } from "./db"
 import type { IngestedDataset } from "./ingest-core"
 
@@ -61,11 +63,60 @@ async function applyDataset(data: IngestedDataset) {
   })
 }
 
+// Resolve the current user's display name from the system. Tries the
+// Electron IPC bridge first (desktop), then falls back to a live fetch
+// from the dev-server endpoint which reads from the OS.
+async function resolveSystemUserName(): Promise<string | null> {
+  // Desktop: the main process can provide the name directly.
+  if (typeof window !== "undefined" && window.electronAPI?.getSystemUserName) {
+    try {
+      const name = await window.electronAPI.getSystemUserName()
+      if (name) return name
+    } catch {
+      // fall through
+    }
+  }
+  // Web: the dev-server endpoint returns the full dataset which includes
+  // the resolved user name. We only need the name, so fetch & extract.
+  try {
+    const res = await fetch(ENDPOINT)
+    if (res.ok) {
+      const data = (await res.json()) as IngestedDataset
+      const u = data.users?.find((u) => u.id === "u-you")
+      if (u?.name && u.name !== "You") return u.name
+    }
+  } catch {
+    // fall through
+  }
+  return null
+}
+
 // Load system data only if the store is currently empty.
 export function loadSystemDataIfEmpty(): Promise<boolean> {
   // Prefer persisted SQLite data (survives refresh) before re-ingesting.
-  return hydrateFromPersistence().then(() => {
-    if (!isEmpty() && hasMessageTasks()) return true
+  return hydrateFromPersistence().then(async () => {
+    if (!isEmpty() && hasMessageTasks()) {
+      // Even when using cached data, update the user's display name from
+      // the system so it stays current without a full re-ingestion.
+      const name = await resolveSystemUserName()
+      if (name) {
+        const users = getUsers()
+        const you = users.find((u) => u.id === "u-you")
+        if (you && you.name !== name) {
+          const initials = name
+            .split(" ")
+            .map((p) => p[0])
+            .slice(0, 2)
+            .join("")
+            .toUpperCase()
+          updateUser("u-you", {
+            name,
+            avatarUrl: `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(initials)}`,
+          })
+        }
+      }
+      return true
+    }
     return loadSystemData()
   })
 }

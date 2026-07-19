@@ -1,11 +1,9 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router"
 import * as React from "react"
 
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { subscribe } from "@/data/db"
 import { loadSystemDataIfEmpty } from "@/data/auto-load"
 import { HeaderLayout } from "@/layout/HeaderLayout"
-import { Menulayout } from "@/layout/Menulayout"
 
 export const Route = createFileRoute("/__mainLayout")({
   component: RouteComponent,
@@ -21,18 +19,15 @@ function RouteComponent() {
   React.useEffect(() => subscribe(() => forceRender((n) => n + 1)), [])
 
   return (
-    <SidebarProvider className="h-dvh overflow-hidden">
-      <Menulayout />
-      <SidebarInset className="h-dvh overflow-hidden">
-        <HeaderLayout />
-        <main className="flex min-h-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-            <div className="mx-auto w-full max-w-[1500px] p-4 md:p-6">
-              <Outlet />
-            </div>
+    <div className="flex h-dvh flex-col overflow-hidden">
+      <HeaderLayout />
+      <main className="flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="mx-auto w-full max-w-[1500px] px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-6">
+            <Outlet />
           </div>
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+        </div>
+      </main>
+    </div>
   )
 }

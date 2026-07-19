@@ -53,7 +53,7 @@ function ProjectDetailPage() {
 
   if (state.status === "loading") {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-24 text-muted-foreground">
+      <div className="flex flex-col items-center justify-center gap-3 py-20 text-muted-foreground">
         <Loader2 className="size-6 animate-spin" />
         <p className="text-sm">Loading project usage…</p>
       </div>
@@ -108,7 +108,7 @@ function ProjectDetailPage() {
   }))
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5 sm:gap-6">
       <PageHeader
         title={project.name}
         description={project.description}
@@ -121,7 +121,7 @@ function ProjectDetailPage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
         <StatCard label="Tokens used" value={summary.totalTokens} icon="tokens" format="compact" />
         <StatCard label="Est. cost" value={summary.estimatedCost} icon="cost" format="currency" />
         <StatCard
@@ -134,7 +134,7 @@ function ProjectDetailPage() {
         <StatCard label="Active users" value={summary.activeUsers} icon="users" format="number" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
         <SectionCard title="Token trend" description="Daily tokens for this project" className="lg:col-span-2">
           <TokenTrendChart data={daily} />
         </SectionCard>
@@ -147,7 +147,7 @@ function ProjectDetailPage() {
         </SectionCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
         <SectionCard title="Cost trend" className="lg:col-span-2">
           <CostTrendChart data={daily} />
         </SectionCard>
@@ -156,7 +156,7 @@ function ProjectDetailPage() {
         </SectionCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
         <SectionCard title="Hourly usage" description="UTC">
           <HourlyBarChart data={hourly} />
         </SectionCard>

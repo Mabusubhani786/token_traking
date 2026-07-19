@@ -171,4 +171,13 @@ export function updateModel(
   void persistStore(store).catch(() => {})
 }
 
+// Update a user record in place (used by auto-load to sync display name).
+export function updateUser(id: string, patch: Partial<Pick<User, "name" | "avatarUrl">>) {
+  store.users = store.users.map((u) =>
+    u.id === id ? { ...u, ...patch } : u,
+  )
+  emit()
+  void persistStore(store).catch(() => {})
+}
+
 export type { IngestedDataset }

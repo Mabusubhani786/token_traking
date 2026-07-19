@@ -1,127 +1,387 @@
-import { useRouterState } from "@tanstack/react-router"
-import { BellIcon, MoonIcon, SunIcon } from "lucide-react"
+import { Link, useRouterState } from "@tanstack/react-router"
+import {
+  BellIcon,
+  Boxes,
+  FolderKanban,
+  LayoutDashboard,
+  ListChecks,
+  MenuIcon,
+  MessageSquare,
+  MoonIcon,
+  Settings,
+  SunIcon,
+  TrendingUp,
+} from "lucide-react"
+import * as React from "react"
 
+import { cn } from "@/lib/utils"
 import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
 import {
   Popover,
   PopoverContent,
-  PopoverDescription,
   PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
-import { SidebarTrigger } from "@/components/ui/sidebar"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
+import { getProjectById, getTasks, getUsers, useDataStore } from "@/data/db"
+import { formatRelative } from "@/lib/format"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { CompactNumber } from "@/components/compact-number"
+import { Sparkline } from "@/components/charts"
+import { getDailyUsage, getUsageSummary } from "@/data/usage-queries"
 
-const notifications = [
+// Real-time notifications: the most recent per-message tasks (each chat
+// message is its own task). Subscribed to the store so it updates as new
+// usage is ingested. Only the latest few are shown.
+function useLatestMessageNotifications(limit = 3) {
+  const dataStore = useDataStore()
+  return React.useMemo(() => {
+    return getTasks()
+      .filter((t) => Boolean(t.parentTaskId))
+      .sort((a, b) => {
+        const at = a.completedAt ?? a.createdAt
+        const bt = b.completedAt ?? b.createdAt
+        return bt < at ? -1 : bt > at ? 1 : 0
+      })
+      .slice(0, limit)
+      .map((t) => {
+        const project = getProjectById(t.projectId)
+        const when = t.completedAt ?? t.createdAt
+        return {
+          id: t.id,
+          title: (t.userText?.trim() || t.title).slice(0, 120),
+          description: project?.name ?? "Unknown project",
+          time: formatRelative(when),
+        }
+      })
+  }, [dataStore, limit])
+}
+
+const NAV_ITEMS = [
+  { title: "Overview", to: "/", icon: LayoutDashboard },
+  { title: "Projects", to: "/projects", icon: FolderKanban },
+  { title: "Tasks", to: "/tasks", icon: ListChecks },
   {
-    title: "New contact message",
-    description: "A new inquiry was submitted from the contact page.",
-    time: "2m ago",
+    title: "Messages",
+    to: "/tasks",
+    icon: MessageSquare,
+    search: { level: "messages" },
   },
-  {
-    title: "Profile updated",
-    description: "Your account settings were updated successfully.",
-    time: "1h ago",
-  },
-  {
-    title: "Deployment ready",
-    description: "The latest frontend build is available for review.",
-    time: "3h ago",
-  },
+  { title: "Models", to: "/models", icon: Boxes },
 ] as const
 
-const TITLE_MAP: Record<string, string> = {
-  "": "Overview",
-  projects: "Projects",
-  users: "Users",
-  tasks: "Tasks",
-  models: "Models",
-  settings: "Settings",
-}
-
-function formatTitle(pathname: string) {
-  if (pathname === "/") return "Overview"
-  const segment = pathname.split("/").filter(Boolean).at(-1) ?? ""
-  if (TITLE_MAP[segment]) return TITLE_MAP[segment]
-  return segment.charAt(0).toUpperCase() + segment.slice(1)
-}
-
-export function HeaderLayout() {
+function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
-  const { theme, setTheme } = useTheme()
-
-  const resolvedTheme = theme === "system" ? "dark" : theme
-  const nextTheme = resolvedTheme === "dark" ? "light" : "dark"
+  const search = useRouterState({
+    select: (state) => state.location.search,
+  })
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border border-b-0 bg-card/95 px-4 text-card-foreground backdrop-blur md:px-6">
-      <SidebarTrigger />
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-foreground">
-          {formatTitle(pathname)}
-        </p>
-        <p className="truncate text-xs text-muted-foreground">{pathname}</p>
-      </div>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon-sm"
-            className="relative"
-            type="button"
-            aria-label="Open notifications"
+    <>
+      {NAV_ITEMS.map((item) => {
+        const onPath =
+          item.to === "/"
+            ? pathname === "/"
+            : pathname === item.to || pathname.startsWith(`${item.to}/`)
+        const wantMessages = "search" in item && item.search?.level === "messages"
+        const matchesLevel = wantMessages
+          ? search.level === "messages"
+          : search.level !== "messages"
+        const active = onPath && matchesLevel
+        return (
+          <Link
+            key={item.title}
+            to={item.to}
+            search={("search" in item ? item.search : undefined) as never}
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              active
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+            )}
           >
-            <BellIcon className="size-4" />
-            <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="end" className="w-80" sideOffset={10}>
-          <PopoverHeader>
-            <PopoverTitle>Notifications</PopoverTitle>
-            <PopoverDescription>
-              You have {notifications.length} unread updates.
-            </PopoverDescription>
-          </PopoverHeader>
-          <Separator />
-          <div className="flex flex-col gap-1">
-            {notifications.map((notification) => (
-              <div
-                key={notification.title}
-                className="rounded-md px-2 py-2 transition-colors hover:bg-accent"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">{notification.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {notification.description}
-                    </p>
+            <item.icon className="size-4" />
+            <span>{item.title}</span>
+          </Link>
+        )
+      })}
+    </>
+  )
+}
+
+export function HeaderLayout() {
+  const { theme, setTheme } = useTheme()
+  const notifications = useLatestMessageNotifications(3)
+  const dataStore = useDataStore()
+  const [mobileNavOpen, setMobileNavOpen] = React.useState(false)
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
+
+  const resolvedTheme = theme === "system" ? "dark" : theme
+
+  const users = React.useMemo(() => getUsers(), [])
+  const user = users[0]
+
+  // Compute compact usage stats for the popover
+  const usageData = React.useMemo(() => {
+    const summary = getUsageSummary()
+    const daily = getDailyUsage({}, 7)
+    const sparkData = daily.map((d) => d.totalTokens)
+
+    // Last activity: most recent event timestamp
+    const tasks = getTasks()
+    const latestTask = tasks
+      .filter((t) => t.completedAt)
+      .sort((a, b) => (b.completedAt ?? b.createdAt) < (a.completedAt ?? a.createdAt) ? -1 : 0)[0]
+
+    return {
+      totalTokens: summary.totalTokens,
+      estimatedCost: summary.estimatedCost,
+      taskCount: summary.taskCount,
+      activeUsers: summary.activeUsers,
+      lastActivity: latestTask ? formatRelative(latestTask.completedAt ?? latestTask.createdAt) : "—",
+      sparkData,
+    }
+  }, [dataStore])
+
+  function initials(name: string): string {
+    return name
+      .split(" ")
+      .map((p) => p[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase()
+  }
+
+  return (
+    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border/60 bg-card/95 px-3 backdrop-blur md:h-16 md:px-6">
+      {/* Left: mobile menu + brand */}
+      <div className="flex min-w-0 items-center gap-2.5">
+        <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+          <SheetTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="shrink-0 md:hidden"
+              aria-label="Open menu"
+            >
+              <MenuIcon className="size-4" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-64 p-0">
+            <SheetHeader className="border-b">
+              <SheetTitle>Menu</SheetTitle>
+            </SheetHeader>
+            <nav className="flex flex-col gap-1 p-3">
+              <NavLinks onNavigate={() => setMobileNavOpen(false)} />
+            </nav>
+          </SheetContent>
+        </Sheet>
+
+        <Link
+          to="/"
+          className="flex shrink-0 items-center gap-2 font-semibold"
+        >
+          <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
+            T
+          </span>
+          <span className="hidden text-sm sm:inline">Token Traking</span>
+        </Link>
+      </div>
+
+      {/* Center: desktop nav bar */}
+      <nav className="hidden flex-1 items-center justify-center gap-1 md:flex">
+        <NavLinks />
+      </nav>
+
+      {/* Right: notifications + theme + avatar */}
+      <div className="flex flex-1 items-center justify-end gap-1.5 md:flex-none">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="relative"
+              type="button"
+              aria-label="Open notifications"
+            >
+              <BellIcon className="size-4" />
+              {notifications.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" />
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80" sideOffset={10}>
+            <PopoverHeader>
+              <PopoverTitle>Latest messages</PopoverTitle>
+            </PopoverHeader>
+            <Separator />
+            {notifications.length === 0 ? (
+              <p className="px-2 py-6 text-center text-xs text-muted-foreground">
+                No recent messages.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className="rounded-md px-2 py-2 transition-colors hover:bg-accent"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <p className="truncate text-sm font-medium">
+                          {notification.title}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {notification.description}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-[11px] text-muted-foreground">
+                        {notification.time}
+                      </span>
+                    </div>
                   </div>
-                  <span className="shrink-0 text-[11px] text-muted-foreground">
-                    {notification.time}
-                  </span>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </PopoverContent>
-      </Popover>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setTheme(nextTheme)}
-        className="gap-2"
-      >
-        {resolvedTheme === "dark" ? (
-          <SunIcon className="size-4" />
-        ) : (
-          <MoonIcon className="size-4" />
-        )}
-        <span className="capitalize">{nextTheme}</span>
-      </Button>
+            )}
+          </PopoverContent>
+        </Popover>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              aria-label={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode`}
+            >
+              {resolvedTheme === "dark" ? (
+                <SunIcon className="size-4" />
+              ) : (
+                <MoonIcon className="size-4" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{resolvedTheme === "dark" ? "light" : "dark"} mode</TooltipContent>
+        </Tooltip>
+
+        {/* Avatar with usage popover */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              className="ml-1 cursor-pointer rounded-full outline-none ring-2 ring-transparent transition-shadow hover:ring-border focus-visible:ring-border"
+              aria-label="User menu"
+            >
+              <Avatar size="default">
+                {user?.avatarUrl && (
+                  <AvatarImage src={user.avatarUrl} alt={user.name} />
+                )}
+                <AvatarFallback>
+                  {user ? initials(user.name) : "U"}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80 p-0" sideOffset={10}>
+            {/* User info header */}
+            <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+              <Avatar size="lg">
+                {user?.avatarUrl && (
+                  <AvatarImage src={user.avatarUrl} alt={user.name} />
+                )}
+                <AvatarFallback>
+                  {user ? initials(user.name) : "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">
+                  {user?.name ?? "User"}
+                </p>
+                {user?.role && (
+                  <p className="truncate text-xs text-muted-foreground">
+                    {user.role}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Token usage stats */}
+            <div className="grid grid-cols-2 gap-px bg-border/40">
+              <div className="flex flex-col gap-0.5 bg-card px-4 py-3">
+                <span className="text-[11px] font-medium text-muted-foreground">Tokens</span>
+                <span className="text-base font-semibold tabular-nums">
+                  <CompactNumber value={usageData.totalTokens} />
+                </span>
+              </div>
+              <div className="flex flex-col gap-0.5 bg-card px-4 py-3">
+                <span className="text-[11px] font-medium text-muted-foreground">Cost</span>
+                <span className="text-base font-semibold tabular-nums">
+                  <CompactNumber value={usageData.estimatedCost} format="currency" />
+                </span>
+              </div>
+              <div className="flex flex-col gap-0.5 bg-card px-4 py-3">
+                <span className="text-[11px] font-medium text-muted-foreground">Tasks</span>
+                <span className="text-base font-semibold tabular-nums">
+                  {usageData.taskCount}
+                </span>
+              </div>
+              <div className="flex flex-col gap-0.5 bg-card px-4 py-3">
+                <span className="text-[11px] font-medium text-muted-foreground">Users</span>
+                <span className="text-base font-semibold tabular-nums">
+                  {usageData.activeUsers}
+                </span>
+              </div>
+            </div>
+
+            {/* 7-day trend */}
+            <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <TrendingUp className="size-3.5" />
+                7-day trend
+              </div>
+              <Sparkline data={usageData.sparkData} width={80} height={20} />
+            </div>
+
+            {/* Last activity */}
+            <div className="flex items-center justify-between border-t border-border/40 px-4 py-2.5">
+              <span className="text-xs text-muted-foreground">Last activity</span>
+              <span className="text-xs font-medium text-foreground">{usageData.lastActivity}</span>
+            </div>
+
+            <Separator />
+
+            {/* Bottom actions */}
+            <div className="flex items-center gap-1 p-2">
+              <Link
+                to="/settings"
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+                  pathname === "/settings"
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                )}
+              >
+                <Settings className="size-3.5" />
+                Settings
+              </Link>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
     </header>
   )
 }

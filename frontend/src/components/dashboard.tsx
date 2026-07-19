@@ -34,11 +34,11 @@ export function PageHeader({
   actions?: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
-        <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{title}</h1>
         {description && (
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
         )}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
@@ -75,12 +75,15 @@ export function StatCard({
   const compact = useCompact()
   const Icon = typeof icon === "string" ? statIcons[icon] : icon
   return (
-    <Card className={cn("stat-card card-pad gap-2", compact ? "p-4" : "p-5")}>
+    <Card className={cn(
+      "stat-card card-pad gap-1.5 transition-colors hover:bg-accent/30",
+      compact ? "p-3.5" : "p-4 sm:p-5",
+    )}>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-sm text-muted-foreground">{label}</span>
-        {Icon && <Icon className="size-4 text-muted-foreground" />}
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        {Icon && <Icon className="size-3.5 text-muted-foreground/60" />}
       </div>
-      <div className="stat-value text-2xl font-semibold tabular-nums tracking-tight">
+      <div className="stat-value text-xl font-semibold tabular-nums tracking-tight sm:text-2xl">
         <CompactNumber
           value={value}
           format={
@@ -147,9 +150,9 @@ export function EmptyState({
 
 export function StatSkeleton() {
   return (
-    <Card className="stat-card card-pad gap-2 p-5">
-      <Skeleton className="h-4 w-20" />
-      <Skeleton className="h-7 w-28" />
+    <Card className="stat-card card-pad gap-1.5 p-4 sm:p-5">
+      <Skeleton className="h-3 w-20" />
+      <Skeleton className="h-6 w-28" />
       <Skeleton className="h-3 w-24" />
     </Card>
   )
@@ -206,8 +209,8 @@ export function SectionCard({
 }) {
   return (
     <Card className={cn("card-pad", className)}>
-      <div className="flex items-start justify-between gap-3 border-b border-border/60 px-5 py-3.5">
-        <div>
+      <div className="flex items-start justify-between gap-3 border-b border-border/40 px-4 pb-3 pt-3 sm:px-5 sm:pb-3.5 sm:pt-3.5">
+        <div className="min-w-0">
           <h3 className="text-sm font-semibold">{title}</h3>
           {description && (
             <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
@@ -215,7 +218,7 @@ export function SectionCard({
         </div>
         {action}
       </div>
-      <div className="px-5 py-4">{children}</div>
+      <div className="px-4 py-3 sm:px-5 sm:py-4">{children}</div>
     </Card>
   )
 }
