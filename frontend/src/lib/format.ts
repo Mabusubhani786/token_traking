@@ -91,6 +91,31 @@ export function formatRelative(iso?: string | null): string {
   return `${months}mo ago`
 }
 
+// Human-readable elapsed time between two ISO timestamps (or a raw ms value).
+export function formatDuration(
+  fromOrMs?: string | number | null,
+  to?: string | null,
+): string {
+  let ms: number
+  if (typeof fromOrMs === "number") {
+    ms = fromOrMs
+  } else if (fromOrMs && to) {
+    ms = new Date(to).getTime() - new Date(fromOrMs).getTime()
+  } else {
+    return "—"
+  }
+  ms = Math.max(0, ms)
+  if (ms < 1000) return `${ms}ms`
+  const s = ms / 1000
+  if (s < 60) return `${s < 10 ? s.toFixed(1) : Math.round(s)}s`
+  const m = Math.floor(s / 60)
+  const rem = Math.round(s % 60)
+  if (m < 60) return rem ? `${m}m ${rem}s` : `${m}m`
+  const h = Math.floor(m / 60)
+  const mm = m % 60
+  return mm ? `${h}h ${mm}m` : `${h}h`
+}
+
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }

@@ -20,6 +20,8 @@ import {
   TableScroll,
 } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -30,19 +32,37 @@ import {
 import { useCompact } from "@/components/settings-provider"
 import { getModels, getProjects, useDataStore } from "@/data/db"
 import { getTaskRows } from "@/data/usage-queries"
-import { formatRelative } from "@/lib/format"
+import { formatDuration, formatRelative } from "@/lib/format"
+
+const LEVELS = ["sessions", "messages", "all"] as const
+type Level = (typeof LEVELS)[number]
 
 export const Route = createFileRoute("/__mainLayout/tasks")({
+  validateSearch: (search: Record<string, unknown>): { level?: Level } => {
+    const level = search.level
+    return {
+      level: LEVELS.includes(level as Level) ? (level as Level) : undefined,
+    }
+  },
   component: TasksPage,
 })
 
 const STATUSES = ["active", "completed", "paused", "archived"] as const
+
+// Empty row list reused when the detail page is mounted (we don't need the
+// heavy task aggregation on a child route — see the `rows` memo below).
+const EMPTY_ROWS: ReturnType<typeof getTaskRows> = []
+
+// How many rows to render at once. Messages can number in the thousands, so we
+// page the table instead of mounting a DOM node per message (keeps it smooth).
+const PAGE_SIZE = 50
 
 function TasksPage() {
   const dataStore = useDataStore()
   const compact = useCompact()
   const navigate = useNavigate()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const { level: levelParam } = Route.useSearch()
   const projects = React.useMemo(() => getProjects(), [dataStore])
   const models = React.useMemo(() => getModels(), [dataStore])
 
@@ -50,6 +70,25 @@ function TasksPage() {
   const [projectId, setProjectId] = React.useState("all")
   const [status, setStatus] = React.useState("all")
   const [modelId, setModelId] = React.useState("all")
+  const [page, setPage] = React.useState(0)
+
+  // Only the list view needs the full task aggregation. When a child route
+  // (e.g. a message detail) is mounted we skip it entirely so opening a detail
+  // page doesn't recompute thousands of rows in the parent layout.
+  const isList = pathname === "/tasks"
+
+  // The task level (sessions vs individual messages) is URL-addressable so the
+  // "Messages" nav entry can deep-link to it and it survives a refresh/share.
+  const level: Level = levelParam ?? "sessions"
+  const setLevel = React.useCallback(
+    (next: string) => {
+      navigate({
+        to: "/tasks",
+        search: { level: next === "sessions" ? undefined : (next as Level) },
+      })
+    },
+    [navigate],
+  )
 
   const filters = React.useMemo(
     () => ({
@@ -59,7 +98,10 @@ function TasksPage() {
     [projectId, modelId],
   )
 
-  const rows = React.useMemo(() => getTaskRows(filters), [filters, dataStore])
+  const rows = React.useMemo(
+    () => (isList ? getTaskRows(filters) : EMPTY_ROWS),
+    [filters, dataStore, isList],
+  )
 
   const filtered = React.useMemo(
     () =>
@@ -73,6 +115,27 @@ function TasksPage() {
         return true
       }),
     [rows, status, search],
+  )
+
+  // Level: sessions group a whole chat; messages are individual chat messages
+  // (each its own task). Default to sessions so the long message list stays
+  // one click away.
+  const levelFiltered = React.useMemo(() => {
+    if (level === "all") return filtered
+    const wantMessage = level === "messages"
+    return filtered.filter((r) => Boolean(r.task.parentTaskId) === wantMessage)
+  }, [filtered, level])
+
+  // Page the visible rows so the table never mounts thousands of DOM nodes.
+  const totalRows = levelFiltered.length
+  const totalPages = Math.max(1, Math.ceil(totalRows / PAGE_SIZE))
+  React.useEffect(() => {
+    setPage(0)
+  }, [levelFiltered])
+  const safePage = Math.min(page, totalPages - 1)
+  const pageRows = levelFiltered.slice(
+    safePage * PAGE_SIZE,
+    safePage * PAGE_SIZE + PAGE_SIZE,
   )
 
   const modelName = React.useMemo(
@@ -137,19 +200,30 @@ function TasksPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={level} onValueChange={setLevel}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="sessions">Sessions</SelectItem>
+                <SelectItem value="messages">Messages</SelectItem>
+                <SelectItem value="all">All levels</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         }
       />
 
-      {filtered.length === 0 ? (
+      {totalRows === 0 ? (
         <EmptyState
           icon={ListChecks}
           title="No tasks found"
-          description="Adjust your filters or search."
+          description="Adjust your filters, level, or search."
         />
       ) : (
+        <>
         <TableScroll className="max-h-[70vh]">
-          <Table className="min-w-[760px]">
+          <Table className="min-w-[860px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Task</TableHead>
@@ -158,12 +232,13 @@ function TasksPage() {
                 <TableHead>Model</TableHead>
                 <TableHead className="text-right">Tokens</TableHead>
                 <TableHead className="text-right">Cost</TableHead>
+                <TableHead className="text-right">Duration</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Last</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-            {filtered.map((r) => (
+            {pageRows.map((r) => (
               <TableRow
                 key={r.task.id}
                 className="cursor-pointer"
@@ -190,8 +265,14 @@ function TasksPage() {
                     params={{ taskId: r.task.id }}
                     className="block min-w-0"
                   >
-                    <span className="block truncate font-medium">
-                      {r.task.title}
+                    <span
+                      className={
+                        r.task.parentTaskId
+                          ? "block truncate pl-3 font-medium text-muted-foreground"
+                          : "block truncate font-medium"
+                      }
+                    >
+                      {r.task.parentTaskId ? `↳ ${r.task.title}` : r.task.title}
                     </span>
                     {!compact && r.task.tags.length > 0 && (
                       <span className="mt-0.5 flex gap-1">
@@ -203,6 +284,11 @@ function TasksPage() {
                             {t}
                           </span>
                         ))}
+                      </span>
+                    )}
+                    {!compact && r.task.parentTaskId && r.task.userText && (
+                      <span className="mt-0.5 block truncate pl-3 text-[11px] text-muted-foreground/80">
+                        {r.task.userText}
                       </span>
                     )}
                   </Link>
@@ -224,6 +310,9 @@ function TasksPage() {
                 <TableCell className="text-right tabular-nums">
                   <CompactNumber value={r.estimatedCost} format="currency" />
                 </TableCell>
+                <TableCell className="text-right tabular-nums text-muted-foreground">
+                  {formatDuration(r.task.startedAt, r.task.completedAt)}
+                </TableCell>
                 <TableCell>
                   <StatusBadge status={r.task.status} />
                 </TableCell>
@@ -235,6 +324,37 @@ function TasksPage() {
             </TableBody>
           </Table>
         </TableScroll>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between gap-3 pt-1">
+            <p className="text-xs text-muted-foreground tabular-nums">
+              Showing {safePage * PAGE_SIZE + 1}–
+              {Math.min((safePage + 1) * PAGE_SIZE, totalRows)} of {totalRows}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safePage === 0}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+              >
+                <ChevronLeft className="size-3.5" /> Prev
+              </Button>
+              <span className="text-xs tabular-nums text-muted-foreground">
+                Page {safePage + 1} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safePage >= totalPages - 1}
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              >
+                Next <ChevronRight className="size-3.5" />
+              </Button>
+            </div>
+          </div>
+        )}
+        </>
       )}
     </div>
   )

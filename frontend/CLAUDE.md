@@ -21,17 +21,7 @@ The app should help users understand where tokens are being spent, which models 
 
 ## Tech Stack
 
-Use the existing frontend stack:
-
-- React
-- TypeScript
-- Vite
-- TanStack Router
-- shadcn/ui
-- Tailwind CSS
-- lucide-react icons
-- Aceternity-style motion and premium UI patterns where they fit the product
-- SQLite for local persistence and reporting data
+Use the existing frontend stack (React + TypeScript + Vite + TanStack Router + shadcn/ui + Tailwind + lucide-react; exact versions in `package.json`).
 
 Prefer local-first behavior. The frontend should be able to read usage data from SQLite-backed APIs or a local bridge layer, depending on the runtime available in the project. Keep SQLite access behind a clean data-access module so UI components never query storage directly.
 
@@ -46,77 +36,7 @@ Design the product around these concepts:
 - `UsageEvent`: one tracked interaction or aggregated usage record.
 - `CostRate`: pricing metadata for a model.
 
-Suggested SQLite tables:
-
-```sql
-projects (
-  id text primary key,
-  name text not null,
-  description text,
-  color text,
-  created_at text not null,
-  updated_at text not null
-);
-
-users (
-  id text primary key,
-  name text not null,
-  email text,
-  avatar_url text,
-  role text,
-  created_at text not null,
-  updated_at text not null
-);
-
-models (
-  id text primary key,
-  provider text not null,
-  name text not null,
-  display_name text not null,
-  input_cost_per_1m real default 0,
-  output_cost_per_1m real default 0,
-  cached_input_cost_per_1m real default 0,
-  created_at text not null,
-  updated_at text not null
-);
-
-tasks (
-  id text primary key,
-  project_id text not null references projects(id),
-  user_id text references users(id),
-  title text not null,
-  status text not null default 'active',
-  tags text,
-  started_at text,
-  completed_at text,
-  created_at text not null,
-  updated_at text not null
-);
-
-usage_events (
-  id text primary key,
-  project_id text not null references projects(id),
-  user_id text references users(id),
-  task_id text references tasks(id),
-  model_id text not null references models(id),
-  input_tokens integer not null default 0,
-  output_tokens integer not null default 0,
-  cached_input_tokens integer not null default 0,
-  total_tokens integer not null default 0,
-  estimated_cost real not null default 0,
-  event_at text not null,
-  created_at text not null
-);
-```
-
-Add indexes for reporting queries:
-
-```sql
-create index idx_usage_events_project_time on usage_events(project_id, event_at);
-create index idx_usage_events_user_time on usage_events(user_id, event_at);
-create index idx_usage_events_task_time on usage_events(task_id, event_at);
-create index idx_usage_events_model_time on usage_events(model_id, event_at);
-```
+The SQLite schema (projects, users, models, tasks, usage_events, with reporting indexes) is implemented in `src/data/persist.ts` — read that for canonical column definitions.
 
 ## Required Screens
 
@@ -238,72 +158,13 @@ The frontend should make SQLite-backed data feel instant:
 - Provide graceful empty states with clear next actions.
 - Handle missing or partial token data without breaking the UI.
 
-## Suggested Data Access Shape
+## Data Access
 
-Use a small service layer:
-
-```txt
-src/
-  data/
-    db.ts
-    usage-queries.ts
-    usage-types.ts
-    seed.ts
-  features/
-    dashboard/
-    projects/
-    users/
-    tasks/
-    models/
-    settings/
-```
-
-Example TypeScript types:
-
-```ts
-export type UsageEvent = {
-  id: string;
-  projectId: string;
-  userId?: string;
-  taskId?: string;
-  modelId: string;
-  inputTokens: number;
-  outputTokens: number;
-  cachedInputTokens: number;
-  totalTokens: number;
-  estimatedCost: number;
-  eventAt: string;
-};
-
-export type UsageSummary = {
-  totalTokens: number;
-  inputTokens: number;
-  outputTokens: number;
-  cachedInputTokens: number;
-  estimatedCost: number;
-  activeProjects: number;
-  activeUsers: number;
-  taskCount: number;
-};
-```
+The data layer lives under `src/data` (`db.ts`, `usage-queries.ts`, `usage-types.ts`, `persist.ts`, ingestion) with feature modules under `src/features/{dashboard,projects,users,tasks,models,settings}`. Add new query functions there rather than querying storage from components.
 
 ## Routing
 
-Use TanStack Router route files consistently with the existing `src/routes` structure.
-
-Suggested routes:
-
-- `/` or `/home`: overview dashboard
-- `/projects`: project analytics
-- `/projects/$projectId`: project detail
-- `/users`: user analytics
-- `/users/$userId`: user detail
-- `/tasks`: task tracker
-- `/tasks/$taskId`: task detail
-- `/models`: model analytics
-- `/settings`: theme, cost rates, and data controls
-
-Keep route components light. Put complex UI in feature components and data logic in data modules.
+Use TanStack Router route files consistently with the existing `src/routes` structure. Keep route components light; put complex UI in feature components and data logic in data modules.
 
 ## Performance Requirements
 
@@ -332,11 +193,7 @@ The app must be usable with keyboard and screen readers:
 
 ## Code Standards
 
-- Type everything that crosses module boundaries.
-- Keep components small and purpose-specific.
-- Prefer composition over large prop-heavy components.
 - Use shadcn/ui components before creating new primitives.
-- Use `cn` from `src/lib/utils.ts` for class composition.
 - Use lucide icons instead of custom inline SVGs when possible.
 - Keep naming clear: `TokenSummaryCard`, `UsageTrendChart`, `ProjectUsageTable`, `ModelCostBreakdown`.
 - Do not mix storage, aggregation, and presentation in a single component.
@@ -346,9 +203,6 @@ The app must be usable with keyboard and screen readers:
 
 Before considering work complete:
 
-- Run `npm run typecheck`.
-- Run `npm run lint`.
-- Run `npm run build`.
 - Manually inspect the dashboard in light and dark mode.
 - Check mobile and desktop layouts.
 - Verify filtering by project, user, model, task, and date range.
@@ -366,4 +220,3 @@ A feature is complete when:
 - Large data sets do not make the UI sluggish.
 - Typecheck, lint, and build pass.
 - The result feels like a polished token analytics product, not a template.
-

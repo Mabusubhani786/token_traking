@@ -77,6 +77,26 @@ function nowISO(): string {
   return new Date().toISOString()
 }
 
+// Pull plain text out of a Claude message `content` (string or array of
+// content blocks) so a chat message can get a readable task title.
+function extractText(content: unknown): string | undefined {
+  if (typeof content === "string") return content.trim() || undefined
+  if (Array.isArray(content)) {
+    const parts = content
+      .filter(
+        (b): b is { type: string; text: string } =>
+          !!b &&
+          typeof b === "object" &&
+          (b as { type?: unknown }).type === "text" &&
+          typeof (b as { text?: unknown }).text === "string",
+      )
+      .map((b) => b.text)
+    const joined = parts.join(" ").trim()
+    return joined.length ? joined : undefined
+  }
+  return undefined
+}
+
 // Claude scopes each project by its working directory, so we group by the
 // real `cwd` (an absolute path). The project name is the leaf folder; the full
 // path is kept in the description for context. If `cwd` is somehow absent we
@@ -122,7 +142,11 @@ type ParsedSession = {
   cwd?: string
   sessionId?: string
   firstUserText?: string
-  events: UsageEvent[]
+  events: (UsageEvent & {
+    text?: string
+    userText?: string
+    startAt?: string
+  })[]
 }
 
 // Parse raw `.jsonl` text from a single session file into usage events.
@@ -131,7 +155,18 @@ function parseSession(text: string): ParsedSession {
   let cwd: string | undefined
   let sessionId: string | undefined
   let firstUserText: string | undefined
-  const events: UsageEvent[] = []
+  // Most recent user prompt seen so far; attached to the following assistant
+  // turn so each message task records "what the user gave".
+  let lastUserText: string | undefined
+  const events: (UsageEvent & {
+    text?: string
+    userText?: string
+    startAt?: string
+  })[] = []
+  // Timestamp of the previous log line, used as a message's start time so we
+  // can show how long each message (turn) took: start = prior activity,
+  // end = this message's own timestamp.
+  let prevTs: string | undefined
 
   for (const line of lines) {
     let obj: Record<string, unknown>
@@ -144,6 +179,7 @@ function parseSession(text: string): ParsedSession {
     const msg = (obj.message ?? null) as Record<string, unknown> | null
     const msgCwd = msg?.cwd
     const usage = msg?.usage as Record<string, unknown> | undefined
+    const lineTs = typeof obj.timestamp === "string" ? obj.timestamp : undefined
 
     // `cwd` lives at the top level on assistant records (verified) and also
     // on `message` for some entries — prefer whichever is present.
@@ -153,12 +189,14 @@ function parseSession(text: string): ParsedSession {
       sessionId = obj.sessionId
     }
     const content = msg?.content
-    if (
-      obj.type === "user" &&
-      !firstUserText &&
-      typeof content === "string"
-    ) {
-      firstUserText = content.slice(0, 90)
+    if (obj.type === "user") {
+      // Keep the first user message as the session title (truncated).
+      if (!firstUserText && typeof content === "string") {
+        firstUserText = content.slice(0, 90)
+      }
+      // Track the latest user prompt to attach to the next assistant turn.
+      const ut = extractText(content)
+      if (ut) lastUserText = ut
     }
 
     if (obj.type === "assistant" && msg && usage) {
@@ -168,7 +206,7 @@ function parseSession(text: string): ParsedSession {
       const cached =
         (Number(usage.cache_read_input_tokens) || 0) +
         (Number(usage.cache_creation_input_tokens) || 0)
-      const ts = (obj.timestamp as string) || nowISO()
+      const ts = lineTs || nowISO()
       events.push({
         id: `e-${events.length}-${sessionId ?? "x"}`,
         projectId: "",
@@ -182,8 +220,13 @@ function parseSession(text: string): ParsedSession {
         estimatedCost: 0, // filled in after models are known
         eventAt: ts,
         createdAt: ts,
+        text: extractText(msg.content),
+        userText: lastUserText,
+        startAt: prevTs ?? ts,
       })
     }
+
+    if (lineTs) prevTs = lineTs
   }
 
   return { projectId: "", cwd, sessionId, firstUserText, events }
@@ -243,6 +286,7 @@ export function buildDataset(sessions: ParsedSession[]): IngestedDataset {
         completedAt: session.events[session.events.length - 1].eventAt,
         createdAt: session.events[0].eventAt,
         updatedAt: session.events[session.events.length - 1].eventAt,
+        userText: session.firstUserText,
       })
     }
 
@@ -262,6 +306,26 @@ export function buildDataset(sessions: ParsedSession[]): IngestedDataset {
           costFor(model, ev.inputTokens, ev.outputTokens, ev.cachedInputTokens) *
             1000,
         ) / 1000
+
+      // Each chat message also becomes its own Task, linked to the session.
+      const msgTaskId = `mt-${ev.id}`
+      ev.messageTaskId = msgTaskId
+      const msgTask: Task = {
+        id: msgTaskId,
+        projectId: project.id,
+        userId: you.id,
+        title: ev.text ? ev.text.slice(0, 60) : `Message · ${model.displayName}`,
+        status: "completed",
+        tags: [],
+        startedAt: ev.startAt ?? ev.eventAt,
+        completedAt: ev.eventAt,
+        createdAt: ev.eventAt,
+        updatedAt: ev.eventAt,
+        parentTaskId: taskId,
+        userText: ev.userText,
+      }
+      if (!tasks.has(msgTaskId)) tasks.set(msgTaskId, msgTask)
+
       events.push(ev)
     }
   }

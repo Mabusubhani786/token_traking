@@ -106,7 +106,12 @@ function applyFilters(events: UsageEvent[], filters: UsageFilters): UsageEvent[]
     if (filters.projectId && e.projectId !== filters.projectId) return false
     if (filters.userId && e.userId !== filters.userId) return false
     if (filters.modelId && e.modelId !== filters.modelId) return false
-    if (filters.taskId && e.taskId !== filters.taskId) return false
+    if (
+      filters.taskId &&
+      e.taskId !== filters.taskId &&
+      e.messageTaskId !== filters.taskId
+    )
+      return false
     const d = eventDate(e.eventAt)
     if (filters.from && d < filters.from) return false
     if (filters.to && d > filters.to) return false
@@ -171,7 +176,9 @@ export function getUsageSummary(
     estimatedCost: Math.round(totals.estimatedCost * 1000) / 1000,
     activeProjects: new Set(events.map((e) => e.projectId)).size,
     activeUsers: new Set(events.map((e) => e.userId).filter(Boolean)).size,
-    taskCount: new Set(events.map((e) => e.taskId).filter(Boolean)).size,
+    taskCount: new Set(
+      events.map((e) => e.messageTaskId ?? e.taskId).filter(Boolean),
+    ).size,
     eventCount: events.length,
     mostUsedModelId,
   }
@@ -491,27 +498,39 @@ export function getUserRows(filters: UsageFilters = {}): UserRow[] {
 
 export function getTaskRows(filters: UsageFilters = {}): TaskRow[] {
   const events = applyFilters(getUsageEvents(), filters)
-  const map = new Map<
-    string,
-    { tokens: number; cost: number; events: number; last: string | null; modelId: string }
-  >()
+  type Agg = { tokens: number; cost: number; events: number; last: string | null; modelId: string }
+  const sessionAgg = new Map<string, Agg>()
+  const msgAgg = new Map<string, Agg>()
   for (const e of events) {
-    if (!e.taskId) continue
-    const cur =
-      map.get(e.taskId) ??
-      { tokens: 0, cost: 0, events: 0, last: null, modelId: e.modelId }
-    cur.tokens += e.totalTokens
-    cur.cost += e.estimatedCost
-    cur.events += 1
-    cur.modelId = e.modelId
-    if (!cur.last || e.eventAt > cur.last) cur.last = e.eventAt
-    map.set(e.taskId, cur)
+    if (e.taskId) {
+      const cur =
+        sessionAgg.get(e.taskId) ??
+        { tokens: 0, cost: 0, events: 0, last: null, modelId: e.modelId }
+      cur.tokens += e.totalTokens
+      cur.cost += e.estimatedCost
+      cur.events += 1
+      cur.modelId = e.modelId
+      if (!cur.last || e.eventAt > cur.last) cur.last = e.eventAt
+      sessionAgg.set(e.taskId, cur)
+    }
+    if (e.messageTaskId) {
+      const cur =
+        msgAgg.get(e.messageTaskId) ??
+        { tokens: 0, cost: 0, events: 0, last: null, modelId: e.modelId }
+      cur.tokens += e.totalTokens
+      cur.cost += e.estimatedCost
+      cur.events += 1
+      cur.modelId = e.modelId
+      if (!cur.last || e.eventAt > cur.last) cur.last = e.eventAt
+      msgAgg.set(e.messageTaskId, cur)
+    }
   }
   const projectById = new Map(getProjects().map((p) => [p.id, p]))
   const userById = new Map(getUsers().map((u) => [u.id, u]))
   const rows: TaskRow[] = []
   for (const t of getTasks()) {
-    const agg = map.get(t.id)
+    // Message tasks aggregate by their own id; session tasks by event.taskId.
+    const agg = t.parentTaskId ? msgAgg.get(t.id) : sessionAgg.get(t.id)
     if (hasActiveFilters(filters) && !agg) continue
     rows.push({
       task: t,
@@ -608,6 +627,36 @@ export function getTaskDetail(taskId: string) {
   if (!task) return undefined
   const project = getProjects().find((p) => p.id === task.projectId)
   const user = task.userId ? getUsers().find((u) => u.id === task.userId) : undefined
+  const parent = task.parentTaskId
+    ? getTasks().find((t) => t.id === task.parentTaskId)
+    : undefined
+
+  // A single message task: pull its one event via messageTaskId and derive
+  // the aggregates from that slice so token totals are correct.
+  if (task.parentTaskId) {
+    const events = getUsageEvents()
+      .filter((e) => e.messageTaskId === taskId)
+      .sort((a, b) => (a.eventAt < b.eventAt ? 1 : -1))
+    const slice: DataSource = {
+      projects: getProjects(),
+      users: getUsers(),
+      models: getModels(),
+      tasks: getTasks(),
+      usageEvents: events,
+    }
+    return {
+      task,
+      project,
+      user,
+      parent,
+      summary: getUsageSummary({}, slice),
+      daily: getDailyUsage({}, 30, slice),
+      hourly: getHourlyUsage({}, slice),
+      byModel: getTopModels({}, undefined, slice),
+      events,
+    }
+  }
+
   const filters: UsageFilters = { taskId }
   const events = applyFilters(getUsageEvents(), filters).sort((a, b) =>
     a.eventAt < b.eventAt ? 1 : -1,
@@ -616,6 +665,7 @@ export function getTaskDetail(taskId: string) {
     task,
     project,
     user,
+    parent,
     summary: getUsageSummary(filters),
     daily: getDailyUsage(filters),
     hourly: getHourlyUsage(filters),

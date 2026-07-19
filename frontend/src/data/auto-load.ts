@@ -5,7 +5,12 @@
 // load it into the store. This means the dashboard shows REAL token usage
 // immediately — no dummy data and no manual "load folder" step.
 
-import { hydrateFromPersistence, isEmpty, loadDataset } from "./db"
+import {
+  hasMessageTasks,
+  hydrateFromPersistence,
+  isEmpty,
+  loadDataset,
+} from "./db"
 import type { IngestedDataset } from "./ingest-core"
 
 const ENDPOINT = "/api/claude-logs"
@@ -60,7 +65,7 @@ async function applyDataset(data: IngestedDataset) {
 export function loadSystemDataIfEmpty(): Promise<boolean> {
   // Prefer persisted SQLite data (survives refresh) before re-ingesting.
   return hydrateFromPersistence().then(() => {
-    if (!isEmpty()) return true
+    if (!isEmpty() && hasMessageTasks()) return true
     return loadSystemData()
   })
 }

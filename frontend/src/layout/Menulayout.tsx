@@ -4,6 +4,7 @@ import {
   FolderKanban,
   LayoutDashboard,
   ListChecks,
+  MessageSquare,
   PanelLeftClose,
   Settings,
   Users,
@@ -34,6 +35,7 @@ const navigationItems = [
   { title: "Projects", to: "/projects", icon: FolderKanban },
   { title: "Users", to: "/users", icon: Users },
   { title: "Tasks", to: "/tasks", icon: ListChecks },
+  { title: "Messages", to: "/tasks", icon: MessageSquare, search: { level: "messages" } },
   { title: "Models", to: "/models", icon: Boxes },
   { title: "Settings", to: "/settings", icon: Settings },
 ] as const
@@ -41,6 +43,9 @@ const navigationItems = [
 export function Menulayout() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
+  })
+  const search = useRouterState({
+    select: (state) => state.location.search,
   })
 
   return (
@@ -68,16 +73,26 @@ export function Menulayout() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navigationItems.map((item) => {
-                const isActive =
+                // Tasks and Messages share the /tasks route, so disambiguate by
+                // the level search param: Messages is active only when
+                // ?level=messages, Tasks otherwise.
+                const onPath =
                   item.to === "/"
                     ? pathname === "/"
-                    : pathname === item.to ||
-                      pathname.startsWith(`${item.to}/`)
+                    : pathname === item.to || pathname.startsWith(`${item.to}/`)
+                const wantMessages = "search" in item && item.search?.level === "messages"
+                const matchesLevel = wantMessages
+                  ? search.level === "messages"
+                  : search.level !== "messages"
+                const isActive = onPath && matchesLevel
 
                 return (
                   <SidebarMenuItem key={item.to}>
                     <SidebarMenuButton asChild isActive={isActive}>
-                      <Link to={item.to}>
+                      <Link
+                        to={item.to}
+                        search={("search" in item ? item.search : undefined) as never}
+                      >
                         <item.icon />
                         <span>{item.title}</span>
                       </Link>

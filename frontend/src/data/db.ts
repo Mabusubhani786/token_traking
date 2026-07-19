@@ -150,6 +150,13 @@ export function isEmpty(): boolean {
   return store.usageEvents.length === 0
 }
 
+export function hasMessageTasks(): boolean {
+  return (
+    store.usageEvents.some((e) => Boolean(e.messageTaskId)) &&
+    store.tasks.some((t) => Boolean(t.parentTaskId))
+  )
+}
+
 // Update a model's cost rates in place (used by Settings).
 export function updateModel(
   id: string,

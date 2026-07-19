@@ -142,6 +142,19 @@ function migrate(database: Database) {
     CREATE INDEX IF NOT EXISTS idx_ue_task_time on usage_events(task_id, event_at);
     CREATE INDEX IF NOT EXISTS idx_ue_model_time on usage_events(model_id, event_at);
   `)
+  // Additive migrations for the two-level task model. Guarded so they are
+  // no-ops on a DB that already has these columns from a previous run.
+  for (const stmt of [
+    "ALTER TABLE tasks ADD COLUMN parent_task_id text",
+    "ALTER TABLE usage_events ADD COLUMN message_task_id text",
+    "ALTER TABLE tasks ADD COLUMN user_text text",
+  ]) {
+    try {
+      database.run(stmt)
+    } catch {
+      // column already exists — ignore
+    }
+  }
 }
 
 async function ensureDb(): Promise<Database> {
@@ -214,6 +227,8 @@ function rowToTask(r: Row): Task {
     completedAt: (r.completed_at as string) || undefined,
     createdAt: r.created_at as string,
     updatedAt: r.updated_at as string,
+    parentTaskId: (r.parent_task_id as string) || undefined,
+    userText: (r.user_text as string) || undefined,
   }
 }
 
@@ -231,6 +246,7 @@ function rowToEvent(r: Row): UsageEvent {
     estimatedCost: Number(r.estimated_cost) || 0,
     eventAt: r.event_at as string,
     createdAt: r.created_at as string,
+    messageTaskId: (r.message_task_id as string) || undefined,
   }
 }
 
@@ -317,7 +333,7 @@ export async function persistStore(store: Store): Promise<void> {
     insModel.free()
 
     const insTask = database.prepare(
-      `INSERT OR REPLACE INTO tasks (id,project_id,user_id,title,status,tags,started_at,completed_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      `INSERT OR REPLACE INTO tasks (id,project_id,user_id,title,status,tags,started_at,completed_at,created_at,updated_at,parent_task_id,user_text) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
     )
     for (const t of store.tasks) {
       insTask.run([
@@ -331,12 +347,14 @@ export async function persistStore(store: Store): Promise<void> {
         t.completedAt ?? null,
         t.createdAt,
         t.updatedAt,
+        t.parentTaskId ?? null,
+        t.userText ?? null,
       ])
     }
     insTask.free()
 
     const insEv = database.prepare(
-      `INSERT OR REPLACE INTO usage_events (id,project_id,user_id,task_id,model_id,input_tokens,output_tokens,cached_input_tokens,total_tokens,estimated_cost,event_at,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      `INSERT OR REPLACE INTO usage_events (id,project_id,user_id,task_id,model_id,input_tokens,output_tokens,cached_input_tokens,total_tokens,estimated_cost,event_at,created_at,message_task_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     )
     for (const e of store.usageEvents) {
       insEv.run([
@@ -352,6 +370,7 @@ export async function persistStore(store: Store): Promise<void> {
         e.estimatedCost,
         e.eventAt,
         e.createdAt,
+        e.messageTaskId ?? null,
       ])
     }
     insEv.free()

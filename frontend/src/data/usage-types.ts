@@ -45,6 +45,12 @@ export type Task = {
   completedAt?: string
   createdAt: string
   updatedAt: string
+  // Set when this task is a single chat message; points at the session task
+  // that groups the messages of one Claude Code session.
+  parentTaskId?: string
+  // For a per-message task, the user's input prompt that produced this
+  // assistant turn (the "what the user gave"). Absent on session tasks.
+  userText?: string
 }
 
 export type UsageEvent = {
@@ -60,6 +66,8 @@ export type UsageEvent = {
   estimatedCost: number
   eventAt: string
   createdAt: string
+  // Points at the per-message Task that represents this single chat message.
+  messageTaskId?: string
 }
 
 export type UsageFilters = {
