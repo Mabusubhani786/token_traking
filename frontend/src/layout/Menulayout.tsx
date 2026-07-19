@@ -1,26 +1,20 @@
 import { Link, useRouterState } from "@tanstack/react-router"
 import {
-  CreditCard,
-  House,
-  Info,
-  LogOut,
-  Mail,
+  Boxes,
+  FolderKanban,
+  LayoutDashboard,
+  ListChecks,
   PanelLeftClose,
   Settings,
-  UserCircle2,
+  Users,
 } from "lucide-react"
 import * as React from "react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  Popover,
-  PopoverContent,
-  PopoverDescription,
-  PopoverHeader,
-  PopoverTitle,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Separator } from "@/components/ui/separator"
+import { getProjects, getUsers, subscribe } from "@/data/db"
+import { getUsageSummary } from "@/data/usage-queries"
+import { useCurrencyFormatter } from "@/components/settings-provider"
+import { CompactNumber } from "@/components/compact-number"
+import { formatNumber } from "@/lib/format"
 import {
   Sidebar,
   SidebarContent,
@@ -36,35 +30,24 @@ import {
 } from "@/components/ui/sidebar"
 
 const navigationItems = [
-  { title: "Home", to: "/home", icon: House },
-  { title: "About", to: "/about", icon: Info },
-  { title: "Contact", to: "/contact", icon: Mail },
-  { title: "Setting", to: "/setting", icon: Settings },
-] as const
-
-const userProfile = {
-  name: "Masani",
-  role: "Frontend Developer",
-  email: "masani@example.com",
-}
-
-const profileActions = [
-  { title: "Profile", icon: UserCircle2, to: "/about" },
-  { title: "Billing", icon: CreditCard, to: "/contact" },
-  { title: "Settings", icon: Settings, to: "/setting" },
+  { title: "Overview", to: "/", icon: LayoutDashboard },
+  { title: "Projects", to: "/projects", icon: FolderKanban },
+  { title: "Users", to: "/users", icon: Users },
+  { title: "Tasks", to: "/tasks", icon: ListChecks },
+  { title: "Models", to: "/models", icon: Boxes },
+  { title: "Settings", to: "/settings", icon: Settings },
 ] as const
 
 export function Menulayout() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
-  const [profileOpen, setProfileOpen] = React.useState(false)
 
   return (
     <Sidebar collapsible="icon" variant="sidebar">
       <SidebarHeader className="h-16 justify-center rounded-t-xl border border-b-0 border-sidebar-border bg-sidebar px-3 py-0">
         <Link
-          to="/home"
+          to="/"
           className="flex h-10 items-center gap-3 rounded-lg px-2 py-1 text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         >
           <div className="flex size-9 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground">
@@ -86,7 +69,10 @@ export function Menulayout() {
             <SidebarMenu>
               {navigationItems.map((item) => {
                 const isActive =
-                  pathname === item.to || pathname.startsWith(`${item.to}/`)
+                  item.to === "/"
+                    ? pathname === "/"
+                    : pathname === item.to ||
+                      pathname.startsWith(`${item.to}/`)
 
                 return (
                   <SidebarMenuItem key={item.to}>
@@ -105,89 +91,52 @@ export function Menulayout() {
       </SidebarContent>
 
       <SidebarFooter className="rounded-b-xl border border-t-0 border-sidebar-border bg-sidebar p-3">
-        <Popover open={profileOpen} onOpenChange={setProfileOpen}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              onMouseEnter={() => setProfileOpen(true)}
-              onMouseLeave={() => setProfileOpen(false)}
-              onFocus={() => setProfileOpen(true)}
-              onBlur={() => setProfileOpen(false)}
-              className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-sidebar-accent focus-visible:bg-sidebar-accent focus-visible:outline-none"
-            >
-              <Avatar size="lg">
-                <AvatarImage
-                  src="https://api.dicebear.com/9.x/initials/svg?seed=Masani"
-                  alt={userProfile.name}
-                />
-                <AvatarFallback>
-                  {userProfile.name.slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-                <p className="truncate text-sm font-medium text-sidebar-foreground">
-                  {userProfile.name}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {userProfile.role}
-                </p>
-              </div>
-            </button>
-          </PopoverTrigger>
-          <PopoverContent
-            side="right"
-            align="end"
-            sideOffset={12}
-            onMouseEnter={() => setProfileOpen(true)}
-            onMouseLeave={() => setProfileOpen(false)}
-            className="w-64"
-          >
-            <div className="flex items-center gap-3">
-              <Avatar size="lg">
-                <AvatarImage
-                  src="https://api.dicebear.com/9.x/initials/svg?seed=Masani"
-                  alt={userProfile.name}
-                />
-                <AvatarFallback>
-                  {userProfile.name.slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <PopoverHeader className="gap-1">
-                <PopoverTitle>{userProfile.name}</PopoverTitle>
-                <PopoverDescription>{userProfile.role}</PopoverDescription>
-              </PopoverHeader>
-            </div>
-            <div className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-              {userProfile.email}
-            </div>
-            <Separator />
-            <div className="flex flex-col gap-1">
-              {profileActions.map((action) => (
-                <Link
-                  key={action.title}
-                  to={action.to}
-                  onClick={() => setProfileOpen(false)}
-                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
-                >
-                  <action.icon className="size-4" />
-                  <span>{action.title}</span>
-                </Link>
-              ))}
-            </div>
-            <Separator />
-            <button
-              type="button"
-              onClick={() => setProfileOpen(false)}
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-red-500 transition-colors hover:bg-red-500/10"
-            >
-              <LogOut className="size-4" />
-              <span>Sign out</span>
-            </button>
-          </PopoverContent>
-        </Popover>
+        <WorkspaceSummary />
       </SidebarFooter>
 
       <SidebarRail />
     </Sidebar>
+  )
+}
+
+// Live workspace totals shown in the sidebar footer. Re-renders when a
+// dataset is loaded so the numbers stay in sync with the data.
+function WorkspaceSummary() {
+  const fmt = useCurrencyFormatter()
+  const [, force] = React.useState(0)
+  React.useEffect(() => subscribe(() => force((n) => n + 1)), [])
+
+  const projects = getProjects().length
+  const users = getUsers().length
+  const summary = getUsageSummary()
+
+  return (
+    <>
+      <div className="group-data-[collapsible=icon]:hidden rounded-xl border border-sidebar-border bg-sidebar-accent/40 px-3 py-2.5">
+        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          Workspace
+        </p>
+        <p className="mt-0.5 text-sm font-medium text-sidebar-foreground">
+          {formatNumber(projects)} projects · {formatNumber(users)} users
+        </p>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <div>
+            <p className="text-[11px] text-muted-foreground">Tokens</p>
+            <p className="text-sm font-semibold tabular-nums text-sidebar-foreground">
+              <CompactNumber value={summary.totalTokens} />
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[11px] text-muted-foreground">Cost</p>
+            <p className="text-sm font-semibold tabular-nums text-sidebar-foreground">
+              {fmt(summary.estimatedCost)}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div className="hidden size-9 items-center justify-center rounded-xl bg-sidebar-accent/40 text-sidebar-foreground group-data-[collapsible=icon]:flex">
+        <Boxes className="size-4" />
+      </div>
+    </>
   )
 }

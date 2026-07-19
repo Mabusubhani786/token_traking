@@ -1,7 +1,27 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/inter";
+
+/* Inter Variable — load only the Latin subsets. The full @fontsource
+   package pulls in every script (cyrillic, greek, vietnamese, …) and Vite
+   bundles all of them even though this UI is English-only. Pin to latin +
+   latin-ext so the build stays small. */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2") format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
 
 @custom-variant dark (&:is(.dark *));
 
@@ -116,6 +136,89 @@
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
 }
+
+/* ---- Accent palettes (applied via [data-accent] on <html>) --------
+   Placed after .dark so they win in both light and dark modes. */
+
+[data-accent="blue"] {
+  --primary: oklch(0.62 0.19 250);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.62 0.19 250);
+  --sidebar-primary: oklch(0.62 0.19 250);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --chart-1: oklch(0.62 0.19 250);
+  --chart-2: oklch(0.70 0.15 200);
+  --chart-3: oklch(0.65 0.17 230);
+  --chart-4: oklch(0.75 0.14 195);
+  --chart-5: oklch(0.58 0.20 280);
+}
+
+[data-accent="emerald"] {
+  --primary: oklch(0.70 0.15 160);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.70 0.15 160);
+  --sidebar-primary: oklch(0.70 0.15 160);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --chart-1: oklch(0.70 0.15 160);
+  --chart-2: oklch(0.75 0.16 145);
+  --chart-3: oklch(0.65 0.17 175);
+  --chart-4: oklch(0.80 0.13 130);
+  --chart-5: oklch(0.60 0.16 190);
+}
+
+[data-accent="violet"] {
+  --primary: oklch(0.62 0.21 290);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.62 0.21 290);
+  --sidebar-primary: oklch(0.62 0.21 290);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --chart-1: oklch(0.62 0.21 290);
+  --chart-2: oklch(0.68 0.19 300);
+  --chart-3: oklch(0.58 0.22 275);
+  --chart-4: oklch(0.72 0.17 320);
+  --chart-5: oklch(0.55 0.20 250);
+}
+
+[data-accent="rose"] {
+  --primary: oklch(0.65 0.22 15);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.65 0.22 15);
+  --sidebar-primary: oklch(0.65 0.22 15);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --chart-1: oklch(0.65 0.22 15);
+  --chart-2: oklch(0.70 0.20 25);
+  --chart-3: oklch(0.62 0.21 5);
+  --chart-4: oklch(0.72 0.18 350);
+  --chart-5: oklch(0.60 0.20 40);
+}
+
+[data-accent="amber"] {
+  --primary: oklch(0.77 0.16 75);
+  --primary-foreground: oklch(0.205 0 0);
+  --ring: oklch(0.77 0.16 75);
+  --sidebar-primary: oklch(0.77 0.16 75);
+  --sidebar-primary-foreground: oklch(0.205 0 0);
+  --chart-1: oklch(0.77 0.16 75);
+  --chart-2: oklch(0.80 0.15 70);
+  --chart-3: oklch(0.72 0.17 85);
+  --chart-4: oklch(0.78 0.14 60);
+  --chart-5: oklch(0.70 0.15 95);
+}
+
+[data-accent="slate"] {
+  --chart-1: oklch(0.55 0.02 264);
+  --chart-2: oklch(0.62 0.02 264);
+  --chart-3: oklch(0.48 0.02 264);
+  --chart-4: oklch(0.70 0.02 264);
+  --chart-5: oklch(0.40 0.02 264);
+}
+
+/* ---- Density ---------------------------------------------------------- */
+
+[data-density="compact"] .stat-card { padding: 0.875rem 1rem; }
+[data-density="compact"] .stat-value { font-size: 1.375rem; }
+[data-density="compact"] .table-cell { padding-top: 0.4rem; padding-bottom: 0.4rem; }
+[data-density="compact"] .card-pad { padding: 0.875rem 1rem; }
 
 @layer base {
   * {

@@ -80,6 +80,7 @@ export type UsageSummary = {
   activeProjects: number
   activeUsers: number
   taskCount: number
+  eventCount: number
   mostUsedModelId?: string
 }
 

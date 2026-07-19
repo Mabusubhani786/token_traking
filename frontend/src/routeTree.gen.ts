@@ -11,10 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as _mainLayoutRouteImport } from './routes/__mainLayout'
 import { Route as _mainLayoutIndexRouteImport } from './routes/__mainLayout/index'
-import { Route as _mainLayoutSettingRouteImport } from './routes/__mainLayout/setting'
-import { Route as _mainLayoutHomeRouteImport } from './routes/__mainLayout/home'
-import { Route as _mainLayoutContactRouteImport } from './routes/__mainLayout/contact'
-import { Route as _mainLayoutAboutRouteImport } from './routes/__mainLayout/about'
+import { Route as _mainLayoutUsersRouteImport } from './routes/__mainLayout/users'
+import { Route as _mainLayoutTasksRouteImport } from './routes/__mainLayout/tasks'
+import { Route as _mainLayoutSettingsRouteImport } from './routes/__mainLayout/settings'
+import { Route as _mainLayoutProjectsRouteImport } from './routes/__mainLayout/projects'
+import { Route as _mainLayoutModelsRouteImport } from './routes/__mainLayout/models'
+import { Route as _mainLayoutUsersUserIdRouteImport } from './routes/__mainLayout/users.$userId'
+import { Route as _mainLayoutTasksTaskIdRouteImport } from './routes/__mainLayout/tasks.$taskId'
+import { Route as _mainLayoutProjectsProjectIdRouteImport } from './routes/__mainLayout/projects.$projectId'
 
 const _mainLayoutRoute = _mainLayoutRouteImport.update({
   id: '/__mainLayout',
@@ -25,63 +29,118 @@ const _mainLayoutIndexRoute = _mainLayoutIndexRouteImport.update({
   path: '/',
   getParentRoute: () => _mainLayoutRoute,
 } as any)
-const _mainLayoutSettingRoute = _mainLayoutSettingRouteImport.update({
-  id: '/setting',
-  path: '/setting',
+const _mainLayoutUsersRoute = _mainLayoutUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
   getParentRoute: () => _mainLayoutRoute,
 } as any)
-const _mainLayoutHomeRoute = _mainLayoutHomeRouteImport.update({
-  id: '/home',
-  path: '/home',
+const _mainLayoutTasksRoute = _mainLayoutTasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
   getParentRoute: () => _mainLayoutRoute,
 } as any)
-const _mainLayoutContactRoute = _mainLayoutContactRouteImport.update({
-  id: '/contact',
-  path: '/contact',
+const _mainLayoutSettingsRoute = _mainLayoutSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => _mainLayoutRoute,
 } as any)
-const _mainLayoutAboutRoute = _mainLayoutAboutRouteImport.update({
-  id: '/about',
-  path: '/about',
+const _mainLayoutProjectsRoute = _mainLayoutProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
   getParentRoute: () => _mainLayoutRoute,
 } as any)
+const _mainLayoutModelsRoute = _mainLayoutModelsRouteImport.update({
+  id: '/models',
+  path: '/models',
+  getParentRoute: () => _mainLayoutRoute,
+} as any)
+const _mainLayoutUsersUserIdRoute = _mainLayoutUsersUserIdRouteImport.update({
+  id: '/$userId',
+  path: '/$userId',
+  getParentRoute: () => _mainLayoutUsersRoute,
+} as any)
+const _mainLayoutTasksTaskIdRoute = _mainLayoutTasksTaskIdRouteImport.update({
+  id: '/$taskId',
+  path: '/$taskId',
+  getParentRoute: () => _mainLayoutTasksRoute,
+} as any)
+const _mainLayoutProjectsProjectIdRoute =
+  _mainLayoutProjectsProjectIdRouteImport.update({
+    id: '/$projectId',
+    path: '/$projectId',
+    getParentRoute: () => _mainLayoutProjectsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof _mainLayoutIndexRoute
-  '/about': typeof _mainLayoutAboutRoute
-  '/contact': typeof _mainLayoutContactRoute
-  '/home': typeof _mainLayoutHomeRoute
-  '/setting': typeof _mainLayoutSettingRoute
+  '/models': typeof _mainLayoutModelsRoute
+  '/projects': typeof _mainLayoutProjectsRouteWithChildren
+  '/settings': typeof _mainLayoutSettingsRoute
+  '/tasks': typeof _mainLayoutTasksRouteWithChildren
+  '/users': typeof _mainLayoutUsersRouteWithChildren
+  '/projects/$projectId': typeof _mainLayoutProjectsProjectIdRoute
+  '/tasks/$taskId': typeof _mainLayoutTasksTaskIdRoute
+  '/users/$userId': typeof _mainLayoutUsersUserIdRoute
 }
 export interface FileRoutesByTo {
-  '/about': typeof _mainLayoutAboutRoute
-  '/contact': typeof _mainLayoutContactRoute
-  '/home': typeof _mainLayoutHomeRoute
-  '/setting': typeof _mainLayoutSettingRoute
+  '/models': typeof _mainLayoutModelsRoute
+  '/projects': typeof _mainLayoutProjectsRouteWithChildren
+  '/settings': typeof _mainLayoutSettingsRoute
+  '/tasks': typeof _mainLayoutTasksRouteWithChildren
+  '/users': typeof _mainLayoutUsersRouteWithChildren
   '/': typeof _mainLayoutIndexRoute
+  '/projects/$projectId': typeof _mainLayoutProjectsProjectIdRoute
+  '/tasks/$taskId': typeof _mainLayoutTasksTaskIdRoute
+  '/users/$userId': typeof _mainLayoutUsersUserIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/__mainLayout': typeof _mainLayoutRouteWithChildren
-  '/__mainLayout/about': typeof _mainLayoutAboutRoute
-  '/__mainLayout/contact': typeof _mainLayoutContactRoute
-  '/__mainLayout/home': typeof _mainLayoutHomeRoute
-  '/__mainLayout/setting': typeof _mainLayoutSettingRoute
+  '/__mainLayout/models': typeof _mainLayoutModelsRoute
+  '/__mainLayout/projects': typeof _mainLayoutProjectsRouteWithChildren
+  '/__mainLayout/settings': typeof _mainLayoutSettingsRoute
+  '/__mainLayout/tasks': typeof _mainLayoutTasksRouteWithChildren
+  '/__mainLayout/users': typeof _mainLayoutUsersRouteWithChildren
   '/__mainLayout/': typeof _mainLayoutIndexRoute
+  '/__mainLayout/projects/$projectId': typeof _mainLayoutProjectsProjectIdRoute
+  '/__mainLayout/tasks/$taskId': typeof _mainLayoutTasksTaskIdRoute
+  '/__mainLayout/users/$userId': typeof _mainLayoutUsersUserIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/contact' | '/home' | '/setting'
+  fullPaths:
+    | '/'
+    | '/models'
+    | '/projects'
+    | '/settings'
+    | '/tasks'
+    | '/users'
+    | '/projects/$projectId'
+    | '/tasks/$taskId'
+    | '/users/$userId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/about' | '/contact' | '/home' | '/setting' | '/'
+  to:
+    | '/models'
+    | '/projects'
+    | '/settings'
+    | '/tasks'
+    | '/users'
+    | '/'
+    | '/projects/$projectId'
+    | '/tasks/$taskId'
+    | '/users/$userId'
   id:
     | '__root__'
     | '/__mainLayout'
-    | '/__mainLayout/about'
-    | '/__mainLayout/contact'
-    | '/__mainLayout/home'
-    | '/__mainLayout/setting'
+    | '/__mainLayout/models'
+    | '/__mainLayout/projects'
+    | '/__mainLayout/settings'
+    | '/__mainLayout/tasks'
+    | '/__mainLayout/users'
     | '/__mainLayout/'
+    | '/__mainLayout/projects/$projectId'
+    | '/__mainLayout/tasks/$taskId'
+    | '/__mainLayout/users/$userId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -104,50 +163,113 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof _mainLayoutIndexRouteImport
       parentRoute: typeof _mainLayoutRoute
     }
-    '/__mainLayout/setting': {
-      id: '/__mainLayout/setting'
-      path: '/setting'
-      fullPath: '/setting'
-      preLoaderRoute: typeof _mainLayoutSettingRouteImport
+    '/__mainLayout/users': {
+      id: '/__mainLayout/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof _mainLayoutUsersRouteImport
       parentRoute: typeof _mainLayoutRoute
     }
-    '/__mainLayout/home': {
-      id: '/__mainLayout/home'
-      path: '/home'
-      fullPath: '/home'
-      preLoaderRoute: typeof _mainLayoutHomeRouteImport
+    '/__mainLayout/tasks': {
+      id: '/__mainLayout/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof _mainLayoutTasksRouteImport
       parentRoute: typeof _mainLayoutRoute
     }
-    '/__mainLayout/contact': {
-      id: '/__mainLayout/contact'
-      path: '/contact'
-      fullPath: '/contact'
-      preLoaderRoute: typeof _mainLayoutContactRouteImport
+    '/__mainLayout/settings': {
+      id: '/__mainLayout/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof _mainLayoutSettingsRouteImport
       parentRoute: typeof _mainLayoutRoute
     }
-    '/__mainLayout/about': {
-      id: '/__mainLayout/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof _mainLayoutAboutRouteImport
+    '/__mainLayout/projects': {
+      id: '/__mainLayout/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof _mainLayoutProjectsRouteImport
       parentRoute: typeof _mainLayoutRoute
+    }
+    '/__mainLayout/models': {
+      id: '/__mainLayout/models'
+      path: '/models'
+      fullPath: '/models'
+      preLoaderRoute: typeof _mainLayoutModelsRouteImport
+      parentRoute: typeof _mainLayoutRoute
+    }
+    '/__mainLayout/users/$userId': {
+      id: '/__mainLayout/users/$userId'
+      path: '/$userId'
+      fullPath: '/users/$userId'
+      preLoaderRoute: typeof _mainLayoutUsersUserIdRouteImport
+      parentRoute: typeof _mainLayoutUsersRoute
+    }
+    '/__mainLayout/tasks/$taskId': {
+      id: '/__mainLayout/tasks/$taskId'
+      path: '/$taskId'
+      fullPath: '/tasks/$taskId'
+      preLoaderRoute: typeof _mainLayoutTasksTaskIdRouteImport
+      parentRoute: typeof _mainLayoutTasksRoute
+    }
+    '/__mainLayout/projects/$projectId': {
+      id: '/__mainLayout/projects/$projectId'
+      path: '/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof _mainLayoutProjectsProjectIdRouteImport
+      parentRoute: typeof _mainLayoutProjectsRoute
     }
   }
 }
 
+interface _mainLayoutProjectsRouteChildren {
+  _mainLayoutProjectsProjectIdRoute: typeof _mainLayoutProjectsProjectIdRoute
+}
+
+const _mainLayoutProjectsRouteChildren: _mainLayoutProjectsRouteChildren = {
+  _mainLayoutProjectsProjectIdRoute: _mainLayoutProjectsProjectIdRoute,
+}
+
+const _mainLayoutProjectsRouteWithChildren =
+  _mainLayoutProjectsRoute._addFileChildren(_mainLayoutProjectsRouteChildren)
+
+interface _mainLayoutTasksRouteChildren {
+  _mainLayoutTasksTaskIdRoute: typeof _mainLayoutTasksTaskIdRoute
+}
+
+const _mainLayoutTasksRouteChildren: _mainLayoutTasksRouteChildren = {
+  _mainLayoutTasksTaskIdRoute: _mainLayoutTasksTaskIdRoute,
+}
+
+const _mainLayoutTasksRouteWithChildren =
+  _mainLayoutTasksRoute._addFileChildren(_mainLayoutTasksRouteChildren)
+
+interface _mainLayoutUsersRouteChildren {
+  _mainLayoutUsersUserIdRoute: typeof _mainLayoutUsersUserIdRoute
+}
+
+const _mainLayoutUsersRouteChildren: _mainLayoutUsersRouteChildren = {
+  _mainLayoutUsersUserIdRoute: _mainLayoutUsersUserIdRoute,
+}
+
+const _mainLayoutUsersRouteWithChildren =
+  _mainLayoutUsersRoute._addFileChildren(_mainLayoutUsersRouteChildren)
+
 interface _mainLayoutRouteChildren {
-  _mainLayoutAboutRoute: typeof _mainLayoutAboutRoute
-  _mainLayoutContactRoute: typeof _mainLayoutContactRoute
-  _mainLayoutHomeRoute: typeof _mainLayoutHomeRoute
-  _mainLayoutSettingRoute: typeof _mainLayoutSettingRoute
+  _mainLayoutModelsRoute: typeof _mainLayoutModelsRoute
+  _mainLayoutProjectsRoute: typeof _mainLayoutProjectsRouteWithChildren
+  _mainLayoutSettingsRoute: typeof _mainLayoutSettingsRoute
+  _mainLayoutTasksRoute: typeof _mainLayoutTasksRouteWithChildren
+  _mainLayoutUsersRoute: typeof _mainLayoutUsersRouteWithChildren
   _mainLayoutIndexRoute: typeof _mainLayoutIndexRoute
 }
 
 const _mainLayoutRouteChildren: _mainLayoutRouteChildren = {
-  _mainLayoutAboutRoute: _mainLayoutAboutRoute,
-  _mainLayoutContactRoute: _mainLayoutContactRoute,
-  _mainLayoutHomeRoute: _mainLayoutHomeRoute,
-  _mainLayoutSettingRoute: _mainLayoutSettingRoute,
+  _mainLayoutModelsRoute: _mainLayoutModelsRoute,
+  _mainLayoutProjectsRoute: _mainLayoutProjectsRouteWithChildren,
+  _mainLayoutSettingsRoute: _mainLayoutSettingsRoute,
+  _mainLayoutTasksRoute: _mainLayoutTasksRouteWithChildren,
+  _mainLayoutUsersRoute: _mainLayoutUsersRouteWithChildren,
   _mainLayoutIndexRoute: _mainLayoutIndexRoute,
 }
 

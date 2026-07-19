@@ -4,13 +4,14 @@
 // Heavy aggregation lives here so components stay presentational.
 
 import {
+  getDatasetRange,
   getModels,
   getProjects,
-  getSeedDateRange,
   getTasks,
   getUsageEvents,
   getUsers,
 } from "./db"
+import type { IngestedDataset } from "./ingest-core"
 import type {
   DailyPoint,
   HeatmapCell,
@@ -24,6 +25,47 @@ import type {
   UsageSummary,
   User,
 } from "./usage-types"
+
+// A dataset slice a query can run against instead of the global store. Used
+// when a screen (e.g. the project detail page) derives from an API-fetched,
+// already-filtered dataset rather than the in-memory store.
+type DataSource = Pick<
+  IngestedDataset,
+  "projects" | "users" | "models" | "tasks" | "usageEvents"
+>
+
+function srcEvents(ds?: DataSource) {
+  return ds ? ds.usageEvents : getUsageEvents()
+}
+function srcProjects(ds?: DataSource) {
+  return ds ? ds.projects : getProjects()
+}
+function srcUsers(ds?: DataSource) {
+  return ds ? ds.users : getUsers()
+}
+function srcModels(ds?: DataSource) {
+  return ds ? ds.models : getModels()
+}
+function srcTasks(ds?: DataSource) {
+  return ds ? ds.tasks : getTasks()
+}
+
+// Date range covered by an arbitrary set of events (used when running a query
+// against a dataset slice instead of the global store).
+function rangeOfEvents(events: UsageEvent[]): { from: string; to: string } {
+  if (events.length === 0) {
+    const t = new Date().toISOString().slice(0, 10)
+    return { from: t, to: t }
+  }
+  let min = "9999-12-31"
+  let max = "0000-01-01"
+  for (const e of events) {
+    const d = e.eventAt.slice(0, 10)
+    if (d < min) min = d
+    if (d > max) max = d
+  }
+  return { from: min, to: max }
+}
 
 function eventDate(iso: string): string {
   return iso.slice(0, 10)
@@ -85,8 +127,11 @@ function hasActiveFilters(filters: UsageFilters): boolean {
 
 // ---- Summary -------------------------------------------------------------
 
-export function getUsageSummary(filters: UsageFilters = {}): UsageSummary {
-  const events = applyFilters(getUsageEvents(), filters)
+export function getUsageSummary(
+  filters: UsageFilters = {},
+  ds?: DataSource,
+): UsageSummary {
+  const events = applyFilters(srcEvents(ds), filters)
   const totals = events.reduce(
     (acc, e) => {
       acc.inputTokens += e.inputTokens
@@ -127,6 +172,7 @@ export function getUsageSummary(filters: UsageFilters = {}): UsageSummary {
     activeProjects: new Set(events.map((e) => e.projectId)).size,
     activeUsers: new Set(events.map((e) => e.userId).filter(Boolean)).size,
     taskCount: new Set(events.map((e) => e.taskId).filter(Boolean)).size,
+    eventCount: events.length,
     mostUsedModelId,
   }
 }
@@ -136,11 +182,17 @@ export function getUsageSummary(filters: UsageFilters = {}): UsageSummary {
 export function getDailyUsage(
   filters: UsageFilters = {},
   days = 30,
+  ds?: DataSource,
 ): DailyPoint[] {
-  const range = getSeedDateRange()
-  const from = filters.from ?? range.from
-  const to = filters.to ?? (days ? fmtDate(addDays(parseDate(range.to), -(days - 1))) : range.to)
-  const events = applyFilters(getUsageEvents(), filters)
+  const events = applyFilters(srcEvents(ds), filters)
+  // Derive `from` from `to` (never the other way around) so the window is
+  // always well-formed. When the dataset spans a single day, `range.from`
+  // would be *later* than `range.to - (days-1)`, which previously produced
+  // an inverted range and an empty series — breaking the trend charts on
+  // detail pages (which call this without explicit from/to).
+  const range = ds ? rangeOfEvents(events) : getDatasetRange()
+  const to = filters.to ?? range.to
+  const from = filters.from ?? fmtDate(addDays(parseDate(to), -(days - 1)))
   const map = new Map<string, DailyPoint>()
   for (const day of eachDay(from, to)) {
     map.set(day, {
@@ -168,8 +220,11 @@ export function getDailyUsage(
   }))
 }
 
-export function getHourlyUsage(filters: UsageFilters = {}): HourlyPoint[] {
-  const events = applyFilters(getUsageEvents(), filters)
+export function getHourlyUsage(
+  filters: UsageFilters = {},
+  ds?: DataSource,
+): HourlyPoint[] {
+  const events = applyFilters(srcEvents(ds), filters)
   const points: HourlyPoint[] = Array.from({ length: 24 }, (_, hour) => ({
     hour,
     totalTokens: 0,
@@ -188,8 +243,11 @@ export function getHourlyUsage(filters: UsageFilters = {}): HourlyPoint[] {
   return points
 }
 
-export function getHeatmap(filters: UsageFilters = {}): HeatmapCell[] {
-  const events = applyFilters(getUsageEvents(), filters)
+export function getHeatmap(
+  filters: UsageFilters = {},
+  ds?: DataSource,
+): HeatmapCell[] {
+  const events = applyFilters(srcEvents(ds), filters)
   const cells: HeatmapCell[] = []
   for (let day = 0; day < 7; day++) {
     for (let hour = 0; hour < 24; hour++) {
@@ -227,10 +285,11 @@ function toNamedTotals(
 export function getTopModels(
   filters: UsageFilters = {},
   limit?: number,
+  ds?: DataSource,
 ): NamedTotal[] {
-  const events = applyFilters(getUsageEvents(), filters)
+  const events = applyFilters(srcEvents(ds), filters)
   const map = new Map<string, { tokens: number; cost: number; count: number }>()
-  const byId = new Map(getModels().map((m) => [m.id, m]))
+  const byId = new Map(srcModels(ds).map((m) => [m.id, m]))
   for (const e of events) {
     const cur = map.get(e.modelId) ?? { tokens: 0, cost: 0, count: 0 }
     cur.tokens += e.totalTokens
@@ -244,10 +303,11 @@ export function getTopModels(
 export function getTopUsers(
   filters: UsageFilters = {},
   limit?: number,
+  ds?: DataSource,
 ): NamedTotal[] {
-  const events = applyFilters(getUsageEvents(), filters)
+  const events = applyFilters(srcEvents(ds), filters)
   const map = new Map<string, { tokens: number; cost: number; count: number }>()
-  const byId = new Map(getUsers().map((u) => [u.id, u]))
+  const byId = new Map(srcUsers(ds).map((u) => [u.id, u]))
   for (const e of events) {
     if (!e.userId) continue
     const cur = map.get(e.userId) ?? { tokens: 0, cost: 0, count: 0 }
@@ -279,10 +339,11 @@ export function getTopProjects(
 export function getTopTasks(
   filters: UsageFilters = {},
   limit?: number,
+  ds?: DataSource,
 ): NamedTotal[] {
-  const events = applyFilters(getUsageEvents(), filters)
+  const events = applyFilters(srcEvents(ds), filters)
   const map = new Map<string, { tokens: number; cost: number; count: number }>()
-  const byId = new Map(getTasks().map((t) => [t.id, t]))
+  const byId = new Map(srcTasks(ds).map((t) => [t.id, t]))
   for (const e of events) {
     if (!e.taskId) continue
     const cur = map.get(e.taskId) ?? { tokens: 0, cost: 0, count: 0 }
@@ -491,7 +552,6 @@ export function getModelRows(filters: UsageFilters = {}): ModelRow[] {
     cur.events += 1
     map.set(e.modelId, cur)
   }
-  const byId = new Map(getModels().map((m) => [m.id, m]))
   const rows = getModels().map((m) => {
     const agg = map.get(m.id)
     return {
@@ -509,17 +569,23 @@ export function getModelRows(filters: UsageFilters = {}): ModelRow[] {
 
 // ---- Detail helpers ------------------------------------------------------
 
-export function getProjectDetail(projectId: string) {
-  const project = getProjects().find((p) => p.id === projectId)
+export function getProjectDetail(projectId: string, ds?: DataSource) {
+  const project = srcProjects(ds).find((p) => p.id === projectId)
   if (!project) return undefined
   const filters: UsageFilters = { projectId }
+  const projectTasks = srcTasks(ds).filter((t) => t.projectId === projectId)
   return {
     project,
-    summary: getUsageSummary(filters),
-    daily: getDailyUsage(filters),
-    hourly: getHourlyUsage(filters),
-    byModel: getTopModels(filters),
-    byUser: getTopUsers(filters),
+    summary: getUsageSummary(filters, ds),
+    daily: getDailyUsage(filters, 30, ds),
+    hourly: getHourlyUsage(filters, ds),
+    byModel: getTopModels(filters, undefined, ds),
+    byUser: getTopUsers(filters, undefined, ds),
+    taskStats: {
+      total: projectTasks.length,
+      completed: projectTasks.filter((t) => t.status === "completed").length,
+      active: projectTasks.filter((t) => t.status === "active").length,
+    },
   }
 }
 
@@ -551,6 +617,7 @@ export function getTaskDetail(taskId: string) {
     project,
     user,
     summary: getUsageSummary(filters),
+    daily: getDailyUsage(filters),
     hourly: getHourlyUsage(filters),
     byModel: getTopModels(filters),
     events,

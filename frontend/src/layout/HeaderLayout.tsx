@@ -32,12 +32,19 @@ const notifications = [
   },
 ] as const
 
-function formatTitle(pathname: string) {
-  if (pathname === "/" || pathname === "") {
-    return "Dashboard"
-  }
+const TITLE_MAP: Record<string, string> = {
+  "": "Overview",
+  projects: "Projects",
+  users: "Users",
+  tasks: "Tasks",
+  models: "Models",
+  settings: "Settings",
+}
 
-  const segment = pathname.split("/").filter(Boolean).at(-1) ?? "dashboard"
+function formatTitle(pathname: string) {
+  if (pathname === "/") return "Overview"
+  const segment = pathname.split("/").filter(Boolean).at(-1) ?? ""
+  if (TITLE_MAP[segment]) return TITLE_MAP[segment]
   return segment.charAt(0).toUpperCase() + segment.slice(1)
 }
 
@@ -51,7 +58,7 @@ export function HeaderLayout() {
   const nextTheme = resolvedTheme === "dark" ? "light" : "dark"
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border border-b-0 bg-card/95 px-4 text-card-foreground backdrop-blur md:px-6">
+    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border border-b-0 bg-card/95 px-4 text-card-foreground backdrop-blur md:px-6">
       <SidebarTrigger />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-foreground">
