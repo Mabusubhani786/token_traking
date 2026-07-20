@@ -17,6 +17,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
+import logoImage from "@/assets/track_ai_token-logo_min.png"
 import {
   Popover,
   PopoverContent,
@@ -288,9 +289,11 @@ export function HeaderLayout() {
           to="/"
           className="flex shrink-0 items-center gap-2 font-semibold tracking-tight"
         >
-          <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/70 text-xs font-bold text-primary-foreground shadow-sm ring-1 ring-inset ring-white/10">
-            T
-          </span>
+          <img
+            src={logoImage}
+            alt="Track AI Tokens Logo"
+            className="size-7 rounded-lg shadow-sm ring-1 ring-white/10 ring-inset"
+          />
           <span className="hidden text-sm sm:inline">Track Ai Tokens</span>
         </Link>
       </div>
@@ -380,7 +383,7 @@ export function HeaderLayout() {
         <Popover>
           <PopoverTrigger asChild>
             <button
-              className="ml-1 cursor-pointer rounded-full outline-none ring-2 ring-transparent transition-all hover:ring-primary/40 hover:shadow-md focus-visible:ring-primary/50"
+              className="ml-1 cursor-pointer rounded-full ring-2 ring-transparent transition-all outline-none hover:shadow-md hover:ring-primary/40 focus-visible:ring-primary/50"
               aria-label="User menu"
             >
               <Avatar size="default">

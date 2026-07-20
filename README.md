@@ -1,234 +1,174 @@
-# End-to-End (E2E) Data Flow — Token Traking
+# Token Traking
 
-This document describes the **complete data pipeline** of the Token Traking app:
-where token usage data comes from, how it is ingested, the API/bridge contract,
-how it is stored and persisted, the query layer, and the UI that renders it.
+> A local-first dashboard for tracking AI model token usage — across tasks,
+> users, projects, and models. See where tokens (and cost) are being spent,
+> which models are most expensive, and how usage changes over time.
 
-The app is **local-first**: there is no backend server and no fabricated data.
-All figures are compiled from real AI session logs on your machine.
-
----
-
-## 1. Data Source
-
-| Item | Value |
-| --- | --- |
-| Source | Real AI session log files (`*.jsonl`) |
-| Location (desktop / dev) | `~/.token-traking-logs/**/*.jsonl` |
-| Format per line | One JSON session message with `message.usage` (input/output/cache tokens), a `model`, and a top-level `cwd` + `sessionId` |
-| Alternative | Any folder containing `.jsonl` files can be loaded manually via Settings → "Load token-traking data folder" (Chromium browsers only, File System Access API) |
-
-Each log line is a chat message. The assistant messages carry the token
-usage we care about; the `cwd` (working directory) scopes the message to a
-**project**, and `sessionId` groups messages into a **task** (session).
+Token Traking runs entirely on your machine. There is **no backend server**
+and **no fabricated data** — every number is compiled from your real AI
+session logs (`*.jsonl`).
 
 ---
 
-## 2. Ingestion Pipeline
+## Features
 
-```
-~/.token-traking-logs/**/*.jsonl
-        │
-        ▼
-readTokenTrakingLogs()              ← node-safe reader  (src/data/token-traking-logs.ts)
-        │  collects *.jsonl, resolves system display name
-        ▼
-parseTokenTrakingLogs(files)        ← pure parser       (src/data/ingest-core.ts)
-        │  one ParsedSession per file
-        ▼
-buildDataset(sessions, userName)    ← aggregator        (src/data/ingest-core.ts)
-        │  produces IngestedDataset { projects, users, models, tasks, usageEvents }
-        ▼
-loadDataset(...)                    ← store writer      (src/data/db.ts)
-```
-
-### Key modules
-
-| File | Responsibility |
-| --- | --- |
-| `src/data/token-traking-logs.ts` | Node-only reader (uses `fs`, `os`, `path`, `execSync`). Single source of truth for the desktop main process **and** the Vite dev middleware. |
-| `src/data/ingest-core.ts` | Pure parsing + aggregation. No Node or browser APIs, so it is importable by both server and client. Exports `parseTokenTrakingLogs`, `buildDataset`, `filterDataset`, `guessProvider`, `costFor`, `KNOWN_RATES`. |
-| `src/data/ingest.ts` | Thin wrapper `ingestFiles(files)` used by the manual "Load folder" path. |
-
-### Cost model
-
-`ingest-core.ts` estimates cost from per-1M-token rates. The recognizable
-prefixes (in `KNOWN_RATES`) map a model string to a provider + rate:
-
-| Prefix | Provider | Input /1M | Output /1M | Cached /1M |
-| --- | --- | --- | --- | --- |
-| `gpt-` | OpenAI | 2.50 | 10.00 | 1.25 |
-| `gemini` | Google | 1.25 | 5.00 | 0.31 |
-| `llama` | Meta | 0.90 | 0.90 | 0.18 |
-| `deepseek` | DeepSeek | 0.55 | 2.19 | 0.14 |
-| `tencent/` | Tencent | 0 | 0 | 0 |
-
-Any model that does not match a known prefix is treated as **Unknown** with
-zero cost (`guessProvider`). `costFor(model, input, output, cached)` multiplies
-token counts by the matched rate.
-
-### `IngestedDataset` shape
-
-```ts
-type IngestedDataset = {
-  projects: Project[]
-  users: User[]
-  models: Model[]
-  tasks: Task[]
-  usageEvents: UsageEvent[]
-}
-```
+- **Overview dashboard** — total/input/output/cached tokens, estimated cost,
+  active projects & users, task count, most-used model, daily trend, hourly
+  heatmap, and top users / tasks / models.
+- **Projects** — per-project usage table with day/hour splits and model/user
+  breakdowns.
+- **Users** — per-user analytics: usage by day/hour, model preference, task and
+  project contribution.
+- **Tasks** — task-level tracking with filters (status, project, user, model,
+  date range, tags) and a per-task event timeline.
+- **Models** — usage and cost grouped by provider, with input vs. output vs.
+  cached split and a cost trend.
+- **Settings** — theme (light/dark/system), accent color, density, currency,
+  editable model cost rates, and data import/export.
+- **Local-first persistence** — in-browser SQLite (sql.js/WASM) backed by
+  IndexedDB, so a refresh needs no re-ingestion.
+- **Desktop app** — packaged with Electron; reads session logs directly from the
+  local filesystem.
 
 ---
 
-## 3. API / Bridge Contract
+## Tech Stack
 
-The compiled dataset is served two ways, depending on runtime:
+| Layer         | Technology                          |
+| ------------- | ----------------------------------- |
+| UI            | React 19, TypeScript                |
+| Build / dev   | Vite 7                              |
+| Routing       | TanStack Router (file-based)        |
+| Components    | shadcn/ui, Radix UI, Tailwind CSS 4 |
+| Icons         | lucide-react                        |
+| Charts        | Recharts                            |
+| Persistence   | sql.js (SQLite WASM) + IndexedDB    |
+| Desktop       | Electron 37                         |
+| Lint / format | ESLint 9, Prettier                  |
 
-### Web (Vite dev / preview)
+---
 
-A Vite middleware plugin (`token-traking-logs-api`, registered in
-`vite.config.ts`) intercepts:
+## Project Structure
 
 ```
-GET /api/token-traking-logs
-GET /api/token-traking-logs?projectId=<id>&userId=<id>&modelId=<id>&taskId=<id>
+token_traking/
+├── CLAUDE.md                 # project-level instructions
+├── README.md                 # this file
+├── E2E-README.md             # end-to-end data-flow reference
+└── frontend/                 # the application
+    ├── CLAUDE.md             # product spec, entities, screens, standards
+    ├── package.json
+    ├── vite.config.ts        # dev-server + /api/token-traking-logs middleware
+    ├── electron/             # Electron main process + preload bridge
+    ├── src/
+    │   ├── data/             # data layer (see below)
+    │   ├── routes/           # TanStack Router screens
+    │   ├── components/       # shared UI / dashboard pieces
+    │   └── features/         # feature-scoped UI modules
+    └── ...
 ```
 
-- Handler: `tokenTrakingLogsHandler` → `readTokenTrakingLogs()` →
-  optional `filterDataset()` when query params are present.
-- Response: `application/json`, `Cache-Control: no-store`, the full
-  `IngestedDataset` (or a filtered slice).
+### Data layer (`frontend/src/data`)
+
+| File                    | Responsibility                                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `token-traking-logs.ts` | Node-safe reader for`~/.token-traking-logs/**/*.jsonl` (used by both the Vite middleware and the Electron main process). |
+| `ingest-core.ts`        | Pure parsing + aggregation (`parseTokenTrakingLogs`, `buildDataset`, `filterDataset`, cost model). No Node/browser APIs. |
+| `ingest.ts`             | `ingestFiles()` wrapper for manual folder loading.                                                                       |
+| `api.ts`                | Typed browser client for the`/api/token-traking-logs` endpoint.                                                          |
+| `auto-load.ts`          | Bootstraps the store with real data on startup.                                                                          |
+| `db.ts`                 | In-memory store — the single read point for the UI.                                                                      |
+| `persist.ts`            | SQLite/IndexedDB durability.                                                                                             |
+| `usage-queries.ts`      | Memoization-friendly query functions (summaries, breakdowns, rows, detail views).                                        |
+| `usage-types.ts`        | Domain types (Project, User, Model, Task, UsageEvent, …).                                                                |
+
+The full pipeline is documented in [`E2E-README.md`](./E2E-README.md).
+
+---
+
+## Data Model
+
+| Entity         | Key fields                                                                                                                    |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Project**    | `id, name, description, color, createdAt, updatedAt`                                                                          |
+| **User**       | `id, name, email, avatarUrl, role, createdAt, updatedAt`                                                                      |
+| **Model**      | `id, provider, name, displayName, inputCostPer1m, outputCostPer1m, cachedInputCostPer1m`                                      |
+| **Task**       | `id, projectId, userId?, title, status, tags[], startedAt?, completedAt?, parentTaskId?, userText?`                           |
+| **UsageEvent** | `id, projectId, userId?, taskId?, modelId, inputTokens, outputTokens, cachedInputTokens, totalTokens, estimatedCost, eventAt` |
+
+A `Task` with `parentTaskId` represents a single chat message; `sessionId`
+groups messages into one session task. `UsageEvent` is the atomic unit of
+tracked consumption.
+
+---
+
+## Getting Started
+
+All commands run from inside `frontend/`.
+
+```bash
+cd frontend
+
+npm install        # install dependencies
+npm run dev        # start the Vite dev server (http://localhost:5173)
+npm run build      # type-check + production build
+npm run preview    # preview the production build
+npm run typecheck  # tsc --noEmit
+npm run lint       # eslint .
+npm run format     # prettier --write "**/*.{ts,tsx}"
+```
 
 ### Desktop (Electron)
 
-- `electron/main.ts` exposes `handleTokenTrakingLogs(url?)` and serves the same
-  `/api/token-traking-logs` route from its tiny static server.
-- IPC channel `"token-traking-logs"` → `getTokenTrakingLogs()` on the preload
-  bridge (`electron/preload.ts`), typed in `src/electron.d.ts`.
-
-### Browser client
-
-`src/data/api.ts` wraps `fetch` with typed helpers:
-
-- `fetchTokenTrakingLogs(filters)` → `GET /api/token-traking-logs?<qs>`
-- `fetchProjectDataset(projectId)` → convenience for `?projectId=`
-
----
-
-## 4. Store & Auto-Load
-
-`src/data/auto-load.ts` boots the app with real data:
-
-1. `loadSystemDataIfEmpty()` hydrates from SQLite persistence first.
-2. If empty (or no message tasks), `loadSystemData()` runs:
-   - **Desktop:** calls `window.electronAPI.getTokenTrakingLogs()` (IPC).
-   - **Web:** `fetch("/api/token-traking-logs")`.
-3. The returned `IngestedDataset` is written into the in-memory store via
-   `loadDataset(...)`.
-
-`resolveSystemUserName()` resolves the current OS user's display name (desktop
-IPC first, then extracted from the dataset's `u-you` user) so the "You" user
-stays current without re-ingesting.
-
-### In-memory store (`src/data/db.ts`)
-
-Single read point for the UI (`useDataStore`, `getProjects`, `getUsers`,
-`getModels`, `getTasks`, `getUsageEvents`, `getDatasetRange`, `isEmpty`,
-`hasMessageTasks`, `updateModel`, `updateUser`, `loadDataset`). Starts empty;
-never touches storage directly.
-
----
-
-## 5. Persistence
-
-`src/data/persist.ts` provides durable, local-first storage:
-
-- In-browser **SQLite** via `sql.js` (WASM). DB bytes are persisted to
-  **IndexedDB** (`token-traking` DB → `sqlite` store → key `db`).
-- `hydrateFromPersistence()` reloads the store on startup so a refresh needs
-  no re-ingestion.
-- `clearPersisted()` wipes it (Settings → "Delete all locally stored data").
-
-The SQLite schema mirrors the domain types in `usage-types.ts`
-(`projects`, `users`, `models`, `tasks`, `usage_events` with reporting
-indexes).
-
----
-
-## 6. Domain Types (`src/data/usage-types.ts`)
-
-| Entity | Key fields |
-| --- | --- |
-| `Project` | `id, name, description, color, createdAt, updatedAt` |
-| `User` | `id, name, email, avatarUrl, role, createdAt, updatedAt` |
-| `Model` | `id, provider, name, displayName, inputCostPer1m, outputCostPer1m, cachedInputCostPer1m, ...` |
-| `Task` | `id, projectId, userId?, title, status, tags[], startedAt?, completedAt?, parentTaskId?, userText?` |
-| `UsageEvent` | `id, projectId, userId?, taskId?, modelId, inputTokens, outputTokens, cachedInputTokens, totalTokens, estimatedCost, eventAt, messageTaskId?` |
-| `TaskStatus` | `"active" \| "completed" \| "paused" \| "archived"` |
-
-Derived/aggregate types: `UsageSummary`, `DailyPoint`, `HourlyPoint`,
-`HeatmapCell`, `NamedTotal`, plus `*Row` types for table views.
-
----
-
-## 7. Query Layer (`src/data/usage-queries.ts`)
-
-Pure, memoization-friendly functions over the in-memory store (never touches
-storage). All accept an optional `UsageFilters`
-(`projectId, userId, modelId, taskId, from, to`).
-
-| Function | Purpose |
-| --- | --- |
-| `getUsageSummary` | Top-level totals: tokens, cost, active projects/users, task/event counts, most-used model |
-| `getDailyUsage` | Daily token/cost trend |
-| `getHourlyUsage` | Per-hour totals + event counts |
-| `getHeatmap` | Day × hour grid of token volume |
-| `getTopModels` / `getTopUsers` / `getTopProjects` / `getTopTasks` | Ranked breakdowns (`NamedTotal`) |
-| `getProjectRows` / `getUserRows` / `getTaskRows` / `getModelRows` | Table rows with joined names + totals |
-| `getProjectDetail` / `getUserDetail` / `getTaskDetail` | Detail views (per-day/hour splits, model & contributor breakdowns) |
-
----
-
-## 8. UI Surface (TanStack Router)
-
-Routes under `src/routes/__mainLayout/`:
-
-| Route | Screen | Data shown |
-| --- | --- | --- |
-| `index.tsx` | **Overview** | Summary cards, daily trend, hourly heatmap, top users/tasks/models |
-| `projects.tsx` + `projects.$projectId.tsx` | **Projects** | Project table; per-project day/hour/model/user splits |
-| `users.tsx` + `users.$userId.tsx` | **Users** | User list; per-user day/hour/model/task/project splits |
-| `tasks.tsx` + `tasks.$taskId.tsx` | **Tasks** | Task list + filters; event timeline per task |
-| `models.tsx` | **Models** | Models by provider, input vs output vs cached, cost trend |
-| `settings.tsx` | **Settings** | Theme, density, currency, model cost rates, data import/export, refresh-from-system, load folder |
-
-The shell (sidebar + top bar) lives in `__mainLayout.tsx`; `components/dashboard.tsx`
-holds shared presentational pieces.
-
----
-
-## 9. Full Round-Trip (one line)
-
-```
-~/.token-traking-logs/*.jsonl
-  → readTokenTrakingLogs()        [token-traking-logs.ts]
-  → parseTokenTrakingLogs()/buildDataset()   [ingest-core.ts]
-  → GET /api/token-traking-logs   [vite.config.ts / electron main.ts]
-  → loadSystemData()              [auto-load.ts]
-  → loadDataset()                 [db.ts]
-  → hydrateFromPersistence()      [persist.ts, on refresh]
-  → get*()/getUsageSummary()/get*Rows()   [usage-queries.ts]
-  → routes/*                      [UI]
+```bash
+npm run electron:dev    # run the app in an Electron dev window
+npm run electron:build  # build the production Electron app
 ```
 
 ---
 
-## 10. Manual / Alternative Data Paths
+## Data Sources
 
-- **Load a folder:** Settings → "Load token-traking data folder" →
-  `ingestFiles()` (uses the File System Access API in Chromium browsers).
-- **Export / Import JSON:** Settings → "Export JSON" / "Import JSON" round-trips
-  the `IngestedDataset` through `loadDataset()`.
-- **Refresh from system:** Settings → "Refresh from system" re-runs
-  `loadSystemData()` against the active data source.
+Token Traking reads real AI session logs. By default it scans:
+
+```
+~/.token-traking-logs/**/*.jsonl
+```
+
+Each log line is a chat message carrying `message.usage` (input/output/cache
+tokens), a `model`, and a top-level `cwd` + `sessionId`. The `cwd` scopes a
+message to a **project**; `sessionId` groups messages into a **task**.
+
+Alternative data paths (Settings screen):
+
+- **Load a folder** — pick any folder containing `.jsonl` files (Chromium
+  browsers, File System Access API).
+- **Export / Import JSON** — round-trip the dataset.
+- **Refresh from system** — re-read from the active source.
+
+### Cost model
+
+Cost is estimated from per-1M-token rates keyed by model prefix
+(`gpt-`, `gemini`, `llama`, `deepseek`, `tencent/`). Unknown models are treated
+as **Unknown** with zero cost. Rates are editable in Settings.
+
+---
+
+## Theming & Settings
+
+- **Theme**: light, dark, system.
+- **Accent colors**: blue, emerald, violet, rose, amber, slate (applied via CSS
+  variables).
+- **Density**: comfortable / compact.
+- **Currency**: configurable display format.
+- **Model cost rates**: view and edit per-model pricing.
+- **Data**: refresh from system, load a folder, export/import JSON, clear local
+  data.
+
+---
+
+## Privacy
+
+Everything is local. Token Traking never uploads your logs or usage data. The
+SQLite database lives in your browser's IndexedDB (web) or the local app
+sandbox (desktop).
