@@ -98,10 +98,21 @@ function TasksPage() {
     [projectId, modelId],
   )
 
-  const rows = React.useMemo(
-    () => (isList ? getTaskRows(filters) : EMPTY_ROWS),
-    [filters, dataStore, isList],
-  )
+  const rows = React.useMemo(() => {
+    const base = isList ? getTaskRows(filters) : EMPTY_ROWS
+    // Present the most recent work first: newest record at the top, oldest
+    // last. Sorting the full set before paging means the first page always
+    // leads with the latest record across every page.
+    return [...base].sort((a, b) => {
+      const ta = Date.parse(
+        a.lastActivity ?? a.task.completedAt ?? a.task.createdAt ?? "",
+      )
+      const tb = Date.parse(
+        b.lastActivity ?? b.task.completedAt ?? b.task.createdAt ?? "",
+      )
+      return (Number.isNaN(tb) ? 0 : tb) - (Number.isNaN(ta) ? 0 : ta)
+    })
+  }, [filters, dataStore, isList])
 
   const filtered = React.useMemo(
     () =>
@@ -279,7 +290,7 @@ function TasksPage() {
                         {r.task.tags.map((t) => (
                           <span
                             key={t}
-                            className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                            className="rounded bg-muted px-1.5 py-0.5 text-2xs text-muted-foreground"
                           >
                             {t}
                           </span>
@@ -287,7 +298,7 @@ function TasksPage() {
                       </span>
                     )}
                     {!compact && r.task.parentTaskId && r.task.userText && (
-                      <span className="mt-0.5 block truncate pl-3 text-[11px] text-muted-foreground/80">
+                      <span className="mt-0.5 block truncate pl-3 text-2xs text-muted-foreground/80">
                         {r.task.userText}
                       </span>
                     )}

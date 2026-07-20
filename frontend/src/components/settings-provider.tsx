@@ -10,6 +10,12 @@ export type AccentName =
   | "rose"
   | "amber"
   | "slate"
+  | "sky"
+  | "cyan"
+  | "teal"
+  | "green"
+  | "orange"
+  | "pink"
 
 export type Density = "comfortable" | "compact"
 
@@ -22,6 +28,12 @@ export const ACCENTS: { id: AccentName; label: string; swatch: string }[] = [
   { id: "rose", label: "Rose", swatch: "oklch(0.65 0.22 15)" },
   { id: "amber", label: "Amber", swatch: "oklch(0.77 0.16 75)" },
   { id: "slate", label: "Slate", swatch: "oklch(0.55 0 0)" },
+  { id: "sky", label: "Sky", swatch: "oklch(0.69 0.15 240)" },
+  { id: "cyan", label: "Cyan", swatch: "oklch(0.72 0.13 200)" },
+  { id: "teal", label: "Teal", swatch: "oklch(0.70 0.12 185)" },
+  { id: "green", label: "Green", swatch: "oklch(0.70 0.16 145)" },
+  { id: "orange", label: "Orange", swatch: "oklch(0.72 0.15 55)" },
+  { id: "pink", label: "Pink", swatch: "oklch(0.68 0.19 350)" },
 ]
 
 export const CURRENCIES: CurrencyCode[] = ["USD", "EUR", "GBP", "INR", "JPY"]
@@ -45,7 +57,7 @@ const SettingsContext = React.createContext<SettingsContextValue | undefined>(
 
 function readInitial(): SettingsState {
   const fallback: SettingsState = {
-    accent: "blue",
+    accent: "slate",
     density: "comfortable",
     currency: "USD",
   }

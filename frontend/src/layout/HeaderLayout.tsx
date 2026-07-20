@@ -85,6 +85,10 @@ const NAV_ITEMS = [
   { title: "Models", to: "/models", icon: Boxes },
 ] as const
 
+// Static avatar image for the current user (kept as a real `src` on the
+// AvatarImage so it always renders an image, with initials as the fallback).
+const AVATAR_SRC = "https://github.com/shadcn.png"
+
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
@@ -125,6 +129,50 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
         )
       })}
     </>
+  )
+}
+
+// Floating, segmented nav pill for the desktop header. The active item gets a
+// raised "chip" so the current screen reads at a glance without a hard border.
+function DesktopNav() {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+  const search = useRouterState({
+    select: (state) => state.location.search,
+  })
+
+  return (
+    <div className="flex items-center gap-1 rounded-full border border-border/50 bg-muted/40 p-1 shadow-sm backdrop-blur">
+      {NAV_ITEMS.map((item) => {
+        const onPath =
+          item.to === "/"
+            ? pathname === "/"
+            : pathname === item.to || pathname.startsWith(`${item.to}/`)
+        const wantMessages =
+          "search" in item && item.search?.level === "messages"
+        const matchesLevel = wantMessages
+          ? search.level === "messages"
+          : search.level !== "messages"
+        const active = onPath && matchesLevel
+        return (
+          <Link
+            key={item.title}
+            to={item.to}
+            search={("search" in item ? item.search : undefined) as never}
+            className={cn(
+              "flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium transition-all",
+              active
+                ? "bg-card text-foreground shadow-sm ring-1 ring-border/50"
+                : "text-muted-foreground hover:bg-card/60 hover:text-foreground"
+            )}
+          >
+            <item.icon className="size-4" />
+            <span>{item.title}</span>
+          </Link>
+        )
+      })}
+    </div>
   )
 }
 
@@ -212,7 +260,7 @@ export function HeaderLayout() {
   }
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border/60 bg-card/95 px-3 backdrop-blur md:h-16 md:px-6">
+    <header className="sticky top-3 z-30 mx-3 flex h-14 shrink-0 items-center gap-3 rounded-xl border border-border/60 bg-card/70 px-3 shadow-lg shadow-black/5 backdrop-blur-xl md:top-4 md:mx-4 md:h-16 md:px-4">
       {/* Left: mobile menu + brand */}
       <div className="flex min-w-0 items-center gap-2.5">
         <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
@@ -236,18 +284,21 @@ export function HeaderLayout() {
           </SheetContent>
         </Sheet>
 
-        <Link to="/" className="flex shrink-0 items-center gap-2 font-semibold">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
+        <Link
+          to="/"
+          className="flex shrink-0 items-center gap-2 font-semibold tracking-tight"
+        >
+          <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/70 text-xs font-bold text-primary-foreground shadow-sm ring-1 ring-inset ring-white/10">
             T
           </span>
-          <span className="hidden text-sm sm:inline">Token Traking</span>
+          <span className="hidden text-sm sm:inline">Track Ai Tokens</span>
         </Link>
       </div>
 
-      {/* Center: desktop nav bar */}
-      <nav className="hidden flex-1 items-center justify-center gap-1 md:flex">
-        <NavLinks />
-      </nav>
+      {/* Center: floating desktop nav pill */}
+      <div className="hidden flex-1 items-center justify-center md:flex">
+        <DesktopNav />
+      </div>
 
       {/* Right: notifications + theme + avatar */}
       <div className="flex flex-1 items-center justify-end gap-1.5 md:flex-none">
@@ -256,7 +307,7 @@ export function HeaderLayout() {
             <Button
               variant="ghost"
               size="icon-sm"
-              className="relative"
+              className="relative rounded-full"
               type="button"
               aria-label="Open notifications"
             >
@@ -291,7 +342,7 @@ export function HeaderLayout() {
                           {notification.description}
                         </p>
                       </div>
-                      <span className="shrink-0 text-[11px] text-muted-foreground">
+                      <span className="shrink-0 text-2xs text-muted-foreground">
                         {notification.time}
                       </span>
                     </div>
@@ -307,6 +358,7 @@ export function HeaderLayout() {
             <Button
               variant="ghost"
               size="icon-sm"
+              className="rounded-full"
               onClick={() =>
                 setTheme(resolvedTheme === "dark" ? "light" : "dark")
               }
@@ -328,13 +380,11 @@ export function HeaderLayout() {
         <Popover>
           <PopoverTrigger asChild>
             <button
-              className="ml-1 cursor-pointer rounded-full ring-2 ring-transparent transition-shadow outline-none hover:ring-border focus-visible:ring-border"
+              className="ml-1 cursor-pointer rounded-full outline-none ring-2 ring-transparent transition-all hover:ring-primary/40 hover:shadow-md focus-visible:ring-primary/50"
               aria-label="User menu"
             >
               <Avatar size="default">
-                {user?.avatarUrl && (
-                  <AvatarImage src={user.avatarUrl} alt={user.name} />
-                )}
+                <AvatarImage src={AVATAR_SRC} alt={user?.name ?? "User"} />
                 <AvatarFallback>
                   {user ? initials(user.name) : "U"}
                 </AvatarFallback>
@@ -345,9 +395,7 @@ export function HeaderLayout() {
             {/* User info header */}
             <div className="flex items-center gap-3 px-4 pt-4 pb-3">
               <Avatar size="lg">
-                {user?.avatarUrl && (
-                  <AvatarImage src={user.avatarUrl} alt={user.name} />
-                )}
+                <AvatarImage src={AVATAR_SRC} alt={user?.name ?? "User"} />
                 <AvatarFallback>
                   {user ? initials(user.name) : "U"}
                 </AvatarFallback>
@@ -369,7 +417,7 @@ export function HeaderLayout() {
             {/* Token usage stats */}
             <div className="grid grid-cols-2 gap-px bg-border/40">
               <div className="flex flex-col gap-0.5 bg-card px-4 py-3">
-                <span className="text-[11px] font-medium text-muted-foreground">
+                <span className="text-2xs font-medium text-muted-foreground">
                   Tokens
                 </span>
                 <span className="text-base font-semibold tabular-nums">
@@ -377,7 +425,7 @@ export function HeaderLayout() {
                 </span>
               </div>
               <div className="flex flex-col gap-0.5 bg-card px-4 py-3">
-                <span className="text-[11px] font-medium text-muted-foreground">
+                <span className="text-2xs font-medium text-muted-foreground">
                   Cost
                 </span>
                 <span className="text-base font-semibold tabular-nums">
@@ -388,7 +436,7 @@ export function HeaderLayout() {
                 </span>
               </div>
               <div className="flex flex-col gap-0.5 bg-card px-4 py-3">
-                <span className="text-[11px] font-medium text-muted-foreground">
+                <span className="text-2xs font-medium text-muted-foreground">
                   Tasks
                 </span>
                 <span className="text-base font-semibold tabular-nums">
@@ -396,7 +444,7 @@ export function HeaderLayout() {
                 </span>
               </div>
               <div className="flex flex-col gap-0.5 bg-card px-4 py-3">
-                <span className="text-[11px] font-medium text-muted-foreground">
+                <span className="text-2xs font-medium text-muted-foreground">
                   Users
                 </span>
                 <span className="text-base font-semibold tabular-nums">

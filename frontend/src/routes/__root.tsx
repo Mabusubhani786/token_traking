@@ -7,7 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 
 export const Route = createRootRoute({
   component: () => (
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
       <SettingsProvider>
         <TooltipProvider>
           <Outlet />

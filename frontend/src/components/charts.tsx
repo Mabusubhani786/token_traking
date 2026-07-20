@@ -238,7 +238,7 @@ export function Heatmap({
   )
   return (
     <div className="flex gap-2 overflow-x-auto pb-1">
-      <div className="flex flex-col justify-between py-0.5 pr-1 text-[10px] text-muted-foreground">
+      <div className="flex flex-col justify-between py-0.5 pr-1 text-2xs text-muted-foreground">
         {days.map((d) => (
           <span key={d} className="h-4 leading-4">
             {d}
@@ -265,7 +265,7 @@ export function Heatmap({
             })}
           </div>
         ))}
-        <div className="flex gap-1 pl-0 text-[10px] text-muted-foreground">
+        <div className="flex gap-1 pl-0 text-2xs text-muted-foreground">
           {[0, 6, 12, 18, 23].map((h) => (
             <span key={h} className="w-4 text-center">
               {h}

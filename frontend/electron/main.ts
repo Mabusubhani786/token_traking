@@ -97,7 +97,7 @@ function createWindow() {
     height: 800,
     minWidth: 900,
     minHeight: 600,
-    title: "Token Traking",
+    title: "Track Ai Tokens",
     backgroundColor: "#0f0f10",
     webPreferences: {
       preload: join(__dirname, "..", "out", "main", "preload.cjs"),

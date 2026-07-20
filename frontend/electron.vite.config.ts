@@ -2,7 +2,7 @@ import { defineConfig, type ConfigEnv, type UserConfig } from "electron-vite"
 import { resolve } from "node:path"
 import webConfig from "./vite.config.ts"
 
-// Desktop build for Token Traking.
+// Desktop build for Track Ai Tokens.
 //
 // - The Electron `main` + `preload` are bundled by esbuild
 //   (scripts/build-electron.mjs) because electron-vite's file watcher deletes
