@@ -32,9 +32,14 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { getProjectById, getTasks, getUsers, useDataStore } from "@/data/db"
+import { getProjectById, getTasks, updateUser, useDataStore } from "@/data/db"
+import { resolveSystemUserName } from "@/data/auto-load"
 import { formatRelative } from "@/lib/format"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { CompactNumber } from "@/components/compact-number"
 import { Sparkline } from "@/components/charts"
@@ -95,7 +100,8 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           item.to === "/"
             ? pathname === "/"
             : pathname === item.to || pathname.startsWith(`${item.to}/`)
-        const wantMessages = "search" in item && item.search?.level === "messages"
+        const wantMessages =
+          "search" in item && item.search?.level === "messages"
         const matchesLevel = wantMessages
           ? search.level === "messages"
           : search.level !== "messages"
@@ -110,7 +116,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
               "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
               active
                 ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
             )}
           >
             <item.icon className="size-4" />
@@ -127,12 +133,48 @@ export function HeaderLayout() {
   const notifications = useLatestMessageNotifications(3)
   const dataStore = useDataStore()
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false)
-  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
 
   const resolvedTheme = theme === "system" ? "dark" : theme
 
-  const users = React.useMemo(() => getUsers(), [])
-  const user = users[0]
+  // The "current" user is the system user (id "u-you"). Derive it from the
+  // live store so the avatar updates the moment real data is ingested —
+  // freezing on the empty store captured at first render previously left the
+  // header stuck on the "U"/"User" placeholder forever.
+  const user = React.useMemo(
+    () =>
+      dataStore.users.find((u) => u.id === "u-you") ??
+      dataStore.users[0] ??
+      null,
+    [dataStore]
+  )
+
+  // Keep the displayed name in sync with the real system account. If the
+  // store's current user still carries the default "You" placeholder (e.g.
+  // loaded before the name was resolved), resolve it from the OS and persist
+  // it so the header reflects the actual logged-in user dynamically.
+  React.useEffect(() => {
+    if (!user || (user.name && user.name !== "You")) return
+    let cancelled = false
+    void resolveSystemUserName().then((name) => {
+      if (cancelled || !name || !user) return
+      const initials = name
+        .split(" ")
+        .map((p) => p[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
+      updateUser(user.id, {
+        name,
+        avatarUrl: `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(initials)}`,
+      })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [user])
 
   // Compute compact usage stats for the popover
   const usageData = React.useMemo(() => {
@@ -144,14 +186,18 @@ export function HeaderLayout() {
     const tasks = getTasks()
     const latestTask = tasks
       .filter((t) => t.completedAt)
-      .sort((a, b) => (b.completedAt ?? b.createdAt) < (a.completedAt ?? a.createdAt) ? -1 : 0)[0]
+      .sort((a, b) =>
+        (b.completedAt ?? b.createdAt) < (a.completedAt ?? a.createdAt) ? -1 : 0
+      )[0]
 
     return {
       totalTokens: summary.totalTokens,
       estimatedCost: summary.estimatedCost,
       taskCount: summary.taskCount,
       activeUsers: summary.activeUsers,
-      lastActivity: latestTask ? formatRelative(latestTask.completedAt ?? latestTask.createdAt) : "—",
+      lastActivity: latestTask
+        ? formatRelative(latestTask.completedAt ?? latestTask.createdAt)
+        : "—",
       sparkData,
     }
   }, [dataStore])
@@ -190,10 +236,7 @@ export function HeaderLayout() {
           </SheetContent>
         </Sheet>
 
-        <Link
-          to="/"
-          className="flex shrink-0 items-center gap-2 font-semibold"
-        >
+        <Link to="/" className="flex shrink-0 items-center gap-2 font-semibold">
           <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
             T
           </span>
@@ -264,7 +307,9 @@ export function HeaderLayout() {
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              onClick={() =>
+                setTheme(resolvedTheme === "dark" ? "light" : "dark")
+              }
               aria-label={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode`}
             >
               {resolvedTheme === "dark" ? (
@@ -274,14 +319,16 @@ export function HeaderLayout() {
               )}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{resolvedTheme === "dark" ? "light" : "dark"} mode</TooltipContent>
+          <TooltipContent>
+            {resolvedTheme === "dark" ? "light" : "dark"} mode
+          </TooltipContent>
         </Tooltip>
 
         {/* Avatar with usage popover */}
         <Popover>
           <PopoverTrigger asChild>
             <button
-              className="ml-1 cursor-pointer rounded-full outline-none ring-2 ring-transparent transition-shadow hover:ring-border focus-visible:ring-border"
+              className="ml-1 cursor-pointer rounded-full ring-2 ring-transparent transition-shadow outline-none hover:ring-border focus-visible:ring-border"
               aria-label="User menu"
             >
               <Avatar size="default">
@@ -322,25 +369,36 @@ export function HeaderLayout() {
             {/* Token usage stats */}
             <div className="grid grid-cols-2 gap-px bg-border/40">
               <div className="flex flex-col gap-0.5 bg-card px-4 py-3">
-                <span className="text-[11px] font-medium text-muted-foreground">Tokens</span>
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  Tokens
+                </span>
                 <span className="text-base font-semibold tabular-nums">
                   <CompactNumber value={usageData.totalTokens} />
                 </span>
               </div>
               <div className="flex flex-col gap-0.5 bg-card px-4 py-3">
-                <span className="text-[11px] font-medium text-muted-foreground">Cost</span>
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  Cost
+                </span>
                 <span className="text-base font-semibold tabular-nums">
-                  <CompactNumber value={usageData.estimatedCost} format="currency" />
+                  <CompactNumber
+                    value={usageData.estimatedCost}
+                    format="currency"
+                  />
                 </span>
               </div>
               <div className="flex flex-col gap-0.5 bg-card px-4 py-3">
-                <span className="text-[11px] font-medium text-muted-foreground">Tasks</span>
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  Tasks
+                </span>
                 <span className="text-base font-semibold tabular-nums">
                   {usageData.taskCount}
                 </span>
               </div>
               <div className="flex flex-col gap-0.5 bg-card px-4 py-3">
-                <span className="text-[11px] font-medium text-muted-foreground">Users</span>
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  Users
+                </span>
                 <span className="text-base font-semibold tabular-nums">
                   {usageData.activeUsers}
                 </span>
@@ -358,8 +416,12 @@ export function HeaderLayout() {
 
             {/* Last activity */}
             <div className="flex items-center justify-between border-t border-border/40 px-4 py-2.5">
-              <span className="text-xs text-muted-foreground">Last activity</span>
-              <span className="text-xs font-medium text-foreground">{usageData.lastActivity}</span>
+              <span className="text-xs text-muted-foreground">
+                Last activity
+              </span>
+              <span className="text-xs font-medium text-foreground">
+                {usageData.lastActivity}
+              </span>
             </div>
 
             <Separator />
@@ -372,7 +434,7 @@ export function HeaderLayout() {
                   "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
                   pathname === "/settings"
                     ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
               >
                 <Settings className="size-3.5" />

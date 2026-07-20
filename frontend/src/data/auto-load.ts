@@ -66,7 +66,7 @@ async function applyDataset(data: IngestedDataset) {
 // Resolve the current user's display name from the system. Tries the
 // Electron IPC bridge first (desktop), then falls back to a live fetch
 // from the dev-server endpoint which reads from the OS.
-async function resolveSystemUserName(): Promise<string | null> {
+export async function resolveSystemUserName(): Promise<string | null> {
   // Desktop: the main process can provide the name directly.
   if (typeof window !== "undefined" && window.electronAPI?.getSystemUserName) {
     try {
