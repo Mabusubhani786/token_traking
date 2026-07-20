@@ -4,6 +4,11 @@
   "version": "0.0.1",
   "type": "module",
   "main": "out/main/main.cjs",
+  "author": {
+    "name": "Token Traking",
+    "email": "subhanishaik3849@gmail.com"
+  },
+  "homepage": "https://github.com/anomalyco/token_traking",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -12,7 +17,12 @@
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "electron:dev": "node scripts/electron-dev.mjs",
-    "electron:build": "npm run build && node scripts/build-electron.mjs && electron-vite build"
+    "electron:build": "npm run build && node scripts/build-electron.mjs && electron-vite build",
+    "package": "npm run electron:build && electron-builder build --publish never",
+    "package:mac": "npm run electron:build && electron-builder build --mac --publish never",
+    "package:win": "npm run electron:build && electron-builder build --win --publish never",
+    "package:linux": "npm run electron:build && electron-builder build --linux --publish never",
+    "package:all": "npm run electron:build && electron-builder build --mac --win --linux --publish never"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
@@ -32,6 +42,81 @@
     "tailwindcss": "^4.2.1",
     "tw-animate-css": "^1.4.0"
   },
+  "build": {
+    "appId": "com.token-traking.app",
+    "productName": "Token Traking",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "!out/renderer/src/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+      "icon": "track_ai_token-logo.png"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+      "icon": "track_ai_token-logo.png"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Development",
+      "maintainer": "Token Traking <token-traking@example.com>",
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+      "icon": "track_ai_token-logo.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@tanstack/router-plugin": "^1.167.14",
@@ -41,6 +126,7 @@
     "@types/sql.js": "^1.4.11",
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "^37.10.3",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
