@@ -29,5 +29,5 @@
     }
   },
   "include": ["src"],
-  "exclude": ["src/data/claude-logs.ts"]
+  "exclude": ["src/data/token-traking-logs.ts"]
 }

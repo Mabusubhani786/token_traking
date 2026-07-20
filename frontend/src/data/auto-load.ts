@@ -1,7 +1,7 @@
 // Automatic, real-data bootstrap.
 //
 // On app start we pull the compiled dataset from the dev-server endpoint
-// (`/api/claude-logs`, which reads the local Claude Code session logs) and
+// (`/api/token-traking-logs`, which reads the local AI session logs) and
 // load it into the store. This means the dashboard shows REAL token usage
 // immediately — no dummy data and no manual "load folder" step.
 
@@ -15,7 +15,7 @@ import {
 } from "./db"
 import type { IngestedDataset } from "./ingest-core"
 
-const ENDPOINT = "/api/claude-logs"
+const ENDPOINT = "/api/token-traking-logs"
 
 let inflight: Promise<boolean> | null = null
 
@@ -25,9 +25,9 @@ export function loadSystemData(): Promise<boolean> {
   if (inflight) return inflight
   inflight = (async () => {
     // Desktop (Electron): read directly from the main process over IPC.
-    if (typeof window !== "undefined" && window.electronAPI?.getClaudeLogs) {
+    if (typeof window !== "undefined" && window.electronAPI?.getTokenTrakingLogs) {
       try {
-        const data = await window.electronAPI.getClaudeLogs()
+        const data = await window.electronAPI.getTokenTrakingLogs()
         if (data && Array.isArray(data.usageEvents) && data.usageEvents.length > 0) {
           await applyDataset(data)
           return true

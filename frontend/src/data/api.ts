@@ -1,6 +1,6 @@
-// Browser-side client for the `/api/claude-logs` endpoint.
+// Browser-side client for the `/api/token-traking-logs` endpoint.
 //
-// The endpoint reads the local Claude Code session logs server-side and can
+// The endpoint reads the local token-traking session logs server-side and can
 // return a whole dataset or a slice scoped by `projectId` / `userId` /
 // `modelId` / `taskId`. These helpers wrap `fetch` with typed responses and
 // query-string building so pages never construct URLs by hand.
@@ -15,7 +15,7 @@ export type LogFilters = {
 }
 
 // Fetch the compiled usage dataset, optionally narrowed by filter.
-export async function fetchClaudeLogs(
+export async function fetchTokenTrakingLogs(
   filters: LogFilters = {},
 ): Promise<IngestedDataset> {
   const params = new URLSearchParams()
@@ -24,7 +24,7 @@ export async function fetchClaudeLogs(
   if (filters.modelId) params.set("modelId", filters.modelId)
   if (filters.taskId) params.set("taskId", filters.taskId)
   const qs = params.toString()
-  const res = await fetch(`/api/claude-logs${qs ? `?${qs}` : ""}`)
+  const res = await fetch(`/api/token-traking-logs${qs ? `?${qs}` : ""}`)
   if (!res.ok) {
     throw new Error(`Failed to load usage data (${res.status})`)
   }
@@ -39,5 +39,5 @@ export async function fetchClaudeLogs(
 export function fetchProjectDataset(
   projectId: string,
 ): Promise<IngestedDataset> {
-  return fetchClaudeLogs({ projectId })
+  return fetchTokenTrakingLogs({ projectId })
 }

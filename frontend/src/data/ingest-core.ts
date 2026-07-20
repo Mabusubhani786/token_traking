@@ -2,7 +2,7 @@
 //
 // Contains only pure logic (no Node `fs`/`os` and no browser-only APIs) so it
 // can be imported by both the Vite dev-server middleware AND the client. The
-// real token usage comes from Claude Code session logs (`*.jsonl`); every
+// real token usage comes from AI session logs (`*.jsonl`); every
 // assistant message carries `message.usage` (input/output/cache tokens), a
 // `model`, and a top-level `cwd` + `sessionId`. No fabricated data anywhere.
 
@@ -28,7 +28,6 @@ export const KNOWN_RATES: Record<
   string,
   { provider: string; input: number; output: number; cached: number }
 > = {
-  claude: { provider: "Anthropic", input: 3, output: 15, cached: 0.3 },
   "gpt-": { provider: "OpenAI", input: 2.5, output: 10, cached: 1.25 },
   gemini: { provider: "Google", input: 1.25, output: 5, cached: 0.31 },
   llama: { provider: "Meta", input: 0.9, output: 0.9, cached: 0.18 },
@@ -77,7 +76,7 @@ function nowISO(): string {
   return new Date().toISOString()
 }
 
-// Pull plain text out of a Claude message `content` (string or array of
+// Pull plain text out of a session message `content` (string or array of
 // content blocks) so a chat message can get a readable task title.
 function extractText(content: unknown): string | undefined {
   if (typeof content === "string") return content.trim() || undefined
@@ -97,11 +96,11 @@ function extractText(content: unknown): string | undefined {
   return undefined
 }
 
-// Claude scopes each project by its working directory, so we group by the
+// Each project is scoped by its working directory, so we group by the
 // real `cwd` (an absolute path). The project name is the leaf folder; the full
 // path is kept in the description for context. If `cwd` is somehow absent we
 // fall back to the encoded project-folder name from the log path.
-export function decodeClaudeProjectPath(folderName: string): string {
+export function decodeProjectPath(folderName: string): string {
   return folderName
 }
 
@@ -233,7 +232,7 @@ function parseSession(text: string): ParsedSession {
 }
 
 // Parse many raw files (each from a session) into lightweight sessions.
-export function parseClaudeLogs(
+export function parseTokenTrakingLogs(
   files: { name: string; text: string }[],
 ): ParsedSession[] {
   return files.map((f) => parseSession(f.text))
@@ -275,7 +274,7 @@ export function buildDataset(sessions: ParsedSession[], userName?: string): Inge
     if (session.events.length === 0) continue
 
     const project = projectFromPath(
-      decodeClaudeProjectPath(session.cwd ?? "unknown"),
+      decodeProjectPath(session.cwd ?? "unknown"),
       "unknown",
     )
     if (!projects.has(project.id)) projects.set(project.id, project)

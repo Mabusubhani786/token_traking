@@ -8,7 +8,7 @@
 import type { Model, Project, Task, UsageEvent, User } from "./usage-types"
 import {
   buildDataset,
-  parseClaudeLogs,
+  parseTokenTrakingLogs,
   type IngestedDataset,
 } from "./ingest-core"
 
@@ -18,7 +18,7 @@ export type { IngestedDataset } from "./ingest-core"
 export function ingestFiles(
   files: { name: string; text: string }[],
 ): IngestedDataset {
-  return buildDataset(parseClaudeLogs(files))
+  return buildDataset(parseTokenTrakingLogs(files))
 }
 
 // Minimal typings for the File System Access API (not yet in all lib defs).

@@ -4,7 +4,7 @@
 // query layer never touch storage directly (see frontend/CLAUDE.md).
 //
 // There is NO dummy/fake data. The store starts empty and is
-// populated at runtime by real ingestion (Claude Code session logs,
+// populated at runtime by real ingestion (AI session logs,
 // parsed in ./ingest.ts) or by JSON import (Settings). Swap this
 // file's internals for a SQLite/sql.js loader later without
 // changing any caller.

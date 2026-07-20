@@ -117,7 +117,7 @@ function SettingsPage() {
     try {
       const result = await ingestDirectory()
       if (!result || result.usageEvents.length === 0) {
-        alert("No Claude session logs (.jsonl) found in that folder.")
+        alert("No session logs (.jsonl) found in that folder.")
         return
       }
       await loadDataset(result)
@@ -140,7 +140,7 @@ function SettingsPage() {
       setModels(getModels())
       window.location.reload()
     } else {
-      alert("No Claude session logs found in ~/.claude/projects. Use “Load Claude data folder” to pick another location.")
+      alert("No session logs found in ~/.token-traking-logs. Use “Load token-traking data folder” to pick another location.")
     }
   }
 
@@ -247,8 +247,8 @@ function SettingsPage() {
           <div className="mt-6 border-t border-border/60 pt-4">
             <p className="mb-1 text-sm font-medium">Data</p>
             <p className="mb-3 text-xs text-muted-foreground">
-              Load real token usage from Claude Code session logs. Pick
-              your <code className="rounded bg-muted px-1">~/.claude/projects</code>{" "}
+              Load real token usage from AI session logs. Pick
+              your <code className="rounded bg-muted px-1">~/.token-traking-logs</code>{" "}
               folder (or any folder with <code className="rounded bg-muted px-1">.jsonl</code>{" "}
               files). Works in Chromium browsers.
             </p>
@@ -265,7 +265,7 @@ function SettingsPage() {
                 <Monitor className="size-3.5" /> Refresh from system
               </Button>
               <Button variant="outline" size="sm" onClick={loadFolder}>
-                <Upload className="size-3.5" /> Load Claude data folder
+                <Upload className="size-3.5" /> Load token-traking data folder
               </Button>
               <Button variant="outline" size="sm" onClick={exportData}>
                 <Download className="size-3.5" /> Export JSON

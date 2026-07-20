@@ -59,7 +59,7 @@ function ModelsPage() {
         <EmptyState
           icon={Boxes}
           title="No models yet"
-          description="Load your Claude Code session logs to see real model usage and cost."
+          description="Load your AI session logs to see real model usage and cost."
         />
       </div>
     )

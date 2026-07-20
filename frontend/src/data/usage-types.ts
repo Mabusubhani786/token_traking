@@ -46,7 +46,7 @@ export type Task = {
   createdAt: string
   updatedAt: string
   // Set when this task is a single chat message; points at the session task
-  // that groups the messages of one Claude Code session.
+  // that groups the messages of one AI session.
   parentTaskId?: string
   // For a per-message task, the user's input prompt that produced this
   // assistant turn (the "what the user gave"). Absent on session tasks.

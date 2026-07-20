@@ -6,21 +6,21 @@ import react from "@vitejs/plugin-react"
 import { tanstackRouter } from "@tanstack/router-plugin/vite"
 import { defineConfig } from "vite"
 
-import { readClaudeLogs } from "./src/data/claude-logs"
+import { readTokenTrakingLogs } from "./src/data/token-traking-logs"
 import {
   filterDataset,
   type DatasetFilters,
 } from "./src/data/ingest-core"
 
 // Dev-server endpoint that serves REAL token usage compiled from the local
-// Claude Code session logs (~/.claude/projects/**/*.jsonl). Runs server-side
+// AI session logs (~/.token-traking-logs/**/*.jsonl). Runs server-side
 // so the browser never needs the File System Access API.
 //
 // Supports `?projectId=` (plus `userId`/`modelId`/`taskId`) to return a
 // dataset scoped to just those usage events.
-function claudeLogsHandler(req: IncomingMessage, res: ServerResponse) {
+function tokenTrakingLogsHandler(req: IncomingMessage, res: ServerResponse) {
   try {
-    const dataset = readClaudeLogs()
+    const dataset = readTokenTrakingLogs()
     const url = new URL(req.url ?? "/", "http://localhost")
     const filters: DatasetFilters = {
       projectId: url.searchParams.get("projectId") ?? undefined,
@@ -41,13 +41,13 @@ function claudeLogsHandler(req: IncomingMessage, res: ServerResponse) {
   }
 }
 
-function claudeLogsPlugin(): Plugin {
+function tokenTrakingLogsPlugin(): Plugin {
   return {
-    name: "claude-logs-api",
+    name: "token-traking-logs-api",
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (req.url && req.url.startsWith("/api/claude-logs")) {
-          claudeLogsHandler(req, res)
+        if (req.url && req.url.startsWith("/api/token-traking-logs")) {
+          tokenTrakingLogsHandler(req, res)
           return
         }
         next()
@@ -65,7 +65,7 @@ export default defineConfig({
     }),
     react(),
     tailwindcss(),
-    claudeLogsPlugin(),
+    tokenTrakingLogsPlugin(),
   ],
   resolve: {
     alias: {

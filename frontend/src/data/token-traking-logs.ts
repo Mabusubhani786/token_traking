@@ -1,16 +1,16 @@
-// Shared, NODE-SAFE reader for real Claude Code session logs.
+// Shared, NODE-SAFE reader for real AI session logs.
 //
 // Imports only Node built-ins (`fs`, `os`, `path`) and the pure ingestion
 // core — never anything browser-only. Both the Vite dev-server middleware
 // AND the Electron main process import this, so there is a single source of
-// truth for reading `~/.claude/projects/**/*.jsonl` into a real dataset.
+// truth for reading token-traking session logs (`*.jsonl`) into a real dataset.
 
 import fs from "fs"
 import os from "os"
 import path from "path"
 import { execSync } from "child_process"
 
-import { buildDataset, parseClaudeLogs, type IngestedDataset } from "./ingest-core"
+import { buildDataset, parseTokenTrakingLogs, type IngestedDataset } from "./ingest-core"
 
 // Recursively collect every *.jsonl file under a directory.
 function collectJsonl(dir: string, out: { name: string; text: string }[]) {
@@ -34,10 +34,10 @@ function collectJsonl(dir: string, out: { name: string; text: string }[]) {
   }
 }
 
-// Read the local Claude Code session logs and compile them into a real
+// Read the local token-traking session logs and compile them into a real
 // token-usage dataset. Returns an empty dataset if no logs are found.
-export function readClaudeLogs(): IngestedDataset {
-  const root = path.join(os.homedir(), ".claude", "projects")
+export function readTokenTrakingLogs(): IngestedDataset {
+  const root = path.join(os.homedir(), ".token-traking-logs")
   const files: { name: string; text: string }[] = []
   collectJsonl(root, files)
 
@@ -49,8 +49,8 @@ export function readClaudeLogs(): IngestedDataset {
     ).trim()
     if (full) displayName = full
   } catch {
-    // fall back to username
+    // fall through to username
   }
 
-  return buildDataset(parseClaudeLogs(files), displayName)
+  return buildDataset(parseTokenTrakingLogs(files), displayName)
 }

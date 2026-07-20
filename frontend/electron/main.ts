@@ -9,7 +9,7 @@ import {
   ipcMain,
   type IpcMainInvokeEvent,
 } from "electron"
-import { readClaudeLogs, type IngestedDataset } from "../src/data/claude-logs"
+import { readTokenTrakingLogs, type IngestedDataset } from "../src/data/token-traking-logs"
 import {
   filterDataset,
   type DatasetFilters,
@@ -18,7 +18,7 @@ import {
 
 // In dev, serve the Vite dev server. In production, serve the built `dist`
 // folder from a tiny static server so the app behaves identically (including
-// the `/api/claude-logs` endpoint) whether running in a browser or desktop.
+// the `/api/token-traking-logs` endpoint) whether running in a browser or desktop.
 const isDev = !app.isPackaged && !process.env.ELECTRON_TEST_PACKAGED
 const DEV_URL = "http://localhost:5173"
 const DIST_DIR = join(__dirname, "..", "out", "renderer")
@@ -36,11 +36,11 @@ const MIME: Record<string, string> = {
 }
 
 // Real token usage — single source of truth, shared with the web middleware.
-// When `url` is provided (the /api/claude-logs HTTP route), apply any
+// When `url` is provided (the /api/token-traking-logs HTTP route), apply any
 // `?projectId=` / `?userId=` / `?modelId=` / `?taskId=` filters so the
 // response is scoped to the requested slice.
-function handleClaudeLogs(url?: URL): IngestedDataset {
-  const dataset = readClaudeLogs()
+function handleTokenTrakingLogs(url?: URL): IngestedDataset {
+  const dataset = readTokenTrakingLogs()
   if (!url) return dataset
   const filters: DatasetFilters = {
     projectId: url.searchParams.get("projectId") ?? undefined,
@@ -57,10 +57,10 @@ async function startStaticServer(): Promise<number> {
   const server = createServer(async (req, res) => {
     try {
       const url = new URL(req.url ?? "/", "http://localhost")
-      if (url.pathname.startsWith("/api/claude-logs")) {
+      if (url.pathname.startsWith("/api/token-traking-logs")) {
         res.setHeader("Content-Type", "application/json")
         res.setHeader("Cache-Control", "no-store")
-        res.end(JSON.stringify(handleClaudeLogs(url)))
+        res.end(JSON.stringify(handleTokenTrakingLogs(url)))
         return
       }
       let pathname = decodeURIComponent(url.pathname)
@@ -129,7 +129,7 @@ function getSystemUserName(): string {
 }
 
 app.whenReady().then(() => {
-  ipcMain.handle("claude-logs", (_e: IpcMainInvokeEvent) => handleClaudeLogs())
+  ipcMain.handle("token-traking-logs", (_e: IpcMainInvokeEvent) => handleTokenTrakingLogs())
   ipcMain.handle("system-user-name", () => getSystemUserName())
   createWindow()
 
